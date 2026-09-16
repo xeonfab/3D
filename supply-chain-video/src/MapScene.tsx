@@ -49,6 +49,15 @@ export const MapScene = ({ camera, legs, legProgress, color }: Props) => {
       );
       return;
     }
+    if (!/^pk\.[^.]+\.[^.]+$/.test(token)) {
+      cancelRender(
+        new Error(
+          `REMOTION_MAPBOX_TOKEN mal formé (« ${token.slice(0, 8)}… ») : attendu un token public « pk.xxx.yyy ». ` +
+            "Vérifiez qu'il n'y a pas de préfixe en double (pk.pk.…), d'espace ni de guillemet dans .env",
+        ),
+      );
+      return;
+    }
     if (!containerRef.current) return;
 
     const handle = delayRender("Chargement du style Mapbox");
@@ -70,7 +79,17 @@ export const MapScene = ({ camera, legs, legProgress, color }: Props) => {
     });
 
     map.on("error", (e) => {
-      cancelRender(new Error(`Mapbox : ${e.error?.message ?? "erreur inconnue"}`));
+      const err = e.error as (Error & { status?: number }) | undefined;
+      const status = err?.status;
+      const hint =
+        status === 401 || status === 403
+          ? " — token Mapbox refusé : vérifiez REMOTION_MAPBOX_TOKEN dans .env (et ses restrictions d'URL sur account.mapbox.com)"
+          : "";
+      cancelRender(
+        new Error(
+          `Mapbox : ${err?.message || "erreur inconnue"}${status ? ` (HTTP ${status})` : ""}${hint}`,
+        ),
+      );
     });
 
     map.on("load", () => {
