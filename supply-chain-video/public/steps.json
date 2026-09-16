@@ -128,22 +128,37 @@
           -9.7
         ],
         [
-          45.65,
-          -1.35
+          46.5,
+          -7.0
         ],
         [
-          45.4,
-          -0.9
+          48.6,
+          -5.6
         ],
         [
-          45.1,
-          -0.7
+          49.3,
+          -3.5
+        ],
+        [
+          49.95,
+          -1.9
+        ],
+        [
+          49.6,
+          -0.4
         ]
       ]
     },
     {
-      "title": "Le Havre → Bordeaux",
-      "caption": "6 semaines de traversée",
+      "title": "Port du Havre",
+      "caption": "Arrivée après 6 semaines de traversée",
+      "lat": 49.49,
+      "lng": 0.11,
+      "mode": "land"
+    },
+    {
+      "title": "Bordeaux",
+      "caption": "Acheminé par la route",
       "lat": 44.84,
       "lng": -0.58,
       "mode": "land"

@@ -73,7 +73,7 @@ Si Remotion ne peut pas télécharger son Chrome headless, indiquez un binaire
 
 La durée est calculée automatiquement : arrêt sur chaque étape + vol entre
 étapes (durée proportionnelle au logarithme de la distance) + écran de fin.
-Avec l'exemple (5 étapes) on obtient ≈ 41 s. Le rythme et la caméra se
+Avec l'exemple (6 étapes) on obtient ≈ 49 s. Le rythme et la caméra se
 règlent sans toucher au code, via des blocs optionnels dans `steps.json` :
 
 ```json
@@ -96,7 +96,7 @@ Le great-circle brut Djibouti → Bordeaux traverse l'Afrique. La route de
 l'exemple passe donc par Bab-el-Mandeb, la mer Rouge, le golfe de Suez, le
 canal (Suez → Ismaïlia → Port-Saïd), le sud de la Crète et de Malte, le cap
 Bon, la mer d'Alboran, Gibraltar, les caps Saint-Vincent, da Roca et
-Finisterre, puis la Gironde. Chaque paire de points consécutifs est reliée
+Finisterre, le golfe de Gascogne, Ouessant et la Manche jusqu'au Havre. Chaque paire de points consécutifs est reliée
 par un arc great-circle : plus deux waypoints sont éloignés, plus l'arc
 « bombe » et risque de mordre une côte. Densifiez les points le long des
 côtes et dans les détroits.
@@ -104,17 +104,16 @@ côtes et dans les détroits.
 `npm run check:route` valide tout cela sans rendre la vidéo :
 
 ```
-[2→3] Port de Djibouti → Le Havre → Bordeaux (sea)
-   route   8027.1 km   direct   5552.1 km
-   passages sur terre : 2 (232 km au total)
+[2→3] Port de Djibouti → Port du Havre (sea)
+   route   8340.2 km   direct   5763.7 km
+   passages sur terre : 1 (150 km au total)
    ~   150 km autour de [30.63, 32.30]  (canal / port : normal)   ← canal de Suez
-   ~    82 km autour de [45.19, -0.76]  (canal / port : normal)   ← estuaire de la Gironde
 ✓ routes cohérentes
 ```
 
 Le script échantillonne chaque tronçon `sea` tous les 5 km contre les
 polygones terrestres Natural Earth 50 m (`world-atlas`). Un canal ou un
-estuaire apparaît comme un court passage « sur terre » (le trait de côte ne
+port fluvial apparaît comme un court passage « sur terre » (le trait de côte ne
 dessine pas les canaux) ; au-delà de `--max-land-km` (200 km par défaut) le
 script échoue et indique la position du problème. Il écrit aussi
 `out/route-check.svg`, une carte terres + route pour contrôle visuel.
