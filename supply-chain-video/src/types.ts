@@ -1,23 +1,32 @@
 /**
  * Types des données d'entrée. Tout le contenu de la vidéo vient de
- * `public/steps.json` et `public/brand.json` : rien n'est codé en dur.
+ * `public/steps-*.json` et `public/brand*.json` : rien n'est codé en dur.
  */
 
 export type TravelMode = "land" | "sea";
+export type Narrative = "origine" | "terroir";
+export type StepKind = "actor" | "transit";
 
 export type Step = {
+  /** `actor` : quelqu'un fait le produit ici (héros). `transit` : simple passage, jamais nommé à l'écran. */
+  kind: StepKind;
   title: string;
-  caption: string;
+  /** Prénom / nom de la personne (actor uniquement). */
+  personName?: string | null;
+  /** Ignoré pour un transit. */
+  caption?: string;
+  /** Ville mise en évidence sur le cartouche (utile pour le dernier actor). */
+  city?: string;
   lat: number;
   lng: number;
-  /** Nom de fichier dans `public/` (ex. "farm.jpg"). */
+  /** Nom de fichier dans `public/` (ex. "farm.jpg"). Ignoré pour un transit. */
   photo?: string;
-  /** Mode du trajet qui PART de cette étape vers la suivante. */
-  mode: TravelMode;
+  /** Mode du trajet qui PART de cette étape vers la suivante (défaut : land). */
+  mode?: TravelMode;
   /**
    * Points de passage du trajet qui part de cette étape, au format
-   * `[lat, lng]` (comme `lat`/`lng` de l'étape). Indispensable pour un
-   * trajet "sea" : c'est le JSON qui porte la route, pas le code.
+   * `[lat, lng]`. Indispensable pour un trajet "sea" : c'est le JSON qui
+   * porte la route, pas le code.
    */
   waypoints?: [number, number][];
   /** Code pays ISO 3166-1 alpha-2 (ex. "FR") : le pays se teinte à l'arrivée de l'étape. */
@@ -27,6 +36,12 @@ export type Step = {
 
 export type StepsFile = {
   product: string;
+  /** `origine` : héros + transport compressé. `terroir` : tout vient d'un rayon local. */
+  narrative: Narrative;
+  /** Nombre d'intermédiaires, affiché au milieu de l'arc de transit (origine). */
+  intermediariesCount?: number | null;
+  /** Ligne de sourcing, alternative à `intermediariesCount` (origine). */
+  sourcingLine?: string | null;
   steps: Step[];
   /** Réglages optionnels de rythme (voir `defaults.ts`). */
   timing?: Partial<Timing>;
@@ -39,8 +54,10 @@ export type CameraSettings = {
   zoomCity: number;
   /** Zoom d'arrêt pour une étape isolée à l'échelle mondiale (≥ 10 000 km). */
   zoomWorld: number;
-  /** Marge (px) autour de la route lorsque la caméra survole un tronçon. */
+  /** Marge (px) autour de la route / du rayon lorsque la caméra cadre l'ensemble. */
   flightPaddingPx: number;
+  /** Terroir : zoom sur une ferme = zoom de la vue rayon + ce supplément. */
+  farmZoomOffset: number;
 };
 
 /** Habillage de la carte, surchargeable depuis `brand.json` → `"map"`. */
@@ -66,16 +83,25 @@ export type MapLook = {
 
 export type Timing = {
   fps: number;
-  /** Fondu d'ouverture sur la première étape (s). */
+  /** Intro : logo en fondu + sous-titre (s). */
   introSeconds: number;
-  /** Temps d'arrêt sur chaque étape, cartouche affiché (s). */
-  holdSeconds: number;
-  /** Durée de vol minimale / maximale entre deux étapes (s). */
-  travelMinSeconds: number;
-  travelMaxSeconds: number;
-  /** Distance (km) à partir de laquelle la durée de vol est maximale. */
-  travelMaxDistanceKm: number;
-  /** Carte fixe avec logo + ligne de fin (s). */
+  /** Premier et dernier actor, les héros (s). */
+  firstActorSeconds: number;
+  lastActorSeconds: number;
+  /** Actors intermédiaires (s), vol d'entrée compris. */
+  actorSeconds: number;
+  /** Vol d'entrée sur un actor intermédiaire / sur le dernier actor (s). */
+  actorFlightSeconds: number;
+  lastActorFlightSeconds: number;
+  /** Tous les transits consécutifs fusionnés en un seul vol d'au plus (s). */
+  transitMaxSeconds: number;
+  /** Part minimale des plans actor sur (actor + transit). */
+  minActorRatio: number;
+  /** Terroir : vue rayon (s). */
+  radiusSeconds: number;
+  /** Cartouches et photos : durée d'apparition / disparition (s). */
+  cardFadeSeconds: number;
+  /** Carte fixe assombrie avec logo + ligne de fin (s). */
   endingSeconds: number;
 };
 
@@ -101,7 +127,7 @@ export type Camera = {
   zoom: number;
 };
 
-/** Un tronçon de la chaîne : de l'étape `from` à l'étape `to`. */
+/** Un tronçon entre deux étapes consécutives. */
 export type Leg = {
   from: number;
   to: number;
@@ -114,13 +140,34 @@ export type Leg = {
   directKm: number;
 };
 
-/** Phase de la timeline, exprimée en frames absolues. */
-export type Phase =
-  | { kind: "hold"; step: number; start: number; end: number }
-  | { kind: "travel"; leg: number; start: number; end: number }
-  | { kind: "ending"; step: number; start: number; end: number };
+/** Segment de la timeline, en frames absolues (`end` exclu). */
+export type Segment =
+  | { kind: "intro"; start: number; end: number }
+  | {
+      kind: "actor";
+      step: number;
+      role: "first" | "middle" | "last";
+      start: number;
+      /** Fin du vol d'entrée (= start pour le premier actor : caméra déjà posée). */
+      flightEnd: number;
+      end: number;
+    }
+  | {
+      kind: "transit";
+      /** Actors de départ et d'arrivée ; `via` = indices des transits traversés. */
+      from: number;
+      to: number;
+      via: number[];
+      start: number;
+      end: number;
+    }
+  | { kind: "radius"; start: number; end: number }
+  | { kind: "ending"; start: number; end: number };
 
+/** Props de la composition : chemins des JSON (dans `public/`) puis contenu chargé. */
 export type VideoProps = {
-  stepsFile: StepsFile;
-  brand: Brand;
+  stepsPath: string;
+  brandPath: string;
+  stepsFile: StepsFile | null;
+  brand: Brand | null;
 };

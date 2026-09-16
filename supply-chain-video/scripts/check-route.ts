@@ -1,7 +1,7 @@
 /**
  * Vérification géographique des routes, sans rendu vidéo :
  *
- *   npm run check:route            # public/steps.json
+ *   npm run check:route            # les deux fichiers de public/
  *   npm run check:route -- autre.json --svg out/route-check.svg --max-land-km 200
  *
  * Pour chaque tronçon :
@@ -33,7 +33,7 @@ const svgPath = opt("--svg") ?? "out/route-check.svg";
 const maxLandKm = Number(opt("--max-land-km") ?? 200);
 const stepsPath =
   args.find((a, i) => !a.startsWith("--") && !(args[i - 1] ?? "").startsWith("--")) ??
-  "public/steps.json";
+  "public/steps-origine.json";
 
 const stepsFile = validateSteps(JSON.parse(readFileSync(resolve(stepsPath), "utf8")));
 const legs = buildLegs(stepsFile.steps);

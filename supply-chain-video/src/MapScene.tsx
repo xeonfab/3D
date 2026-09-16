@@ -18,8 +18,8 @@ import {
   HILLSHADE,
   MAPBOX_STYLE,
 } from "./defaults";
-import { partialLine } from "./geo";
-import type { Camera, Leg, MapLook } from "./types";
+import type { SceneLine } from "./scene";
+import type { Camera, MapLook } from "./types";
 
 const ROUTE_SOURCE = "route";
 const DEM_SOURCE = "mapbox-dem";
@@ -28,9 +28,8 @@ const HIGHLIGHT_LAYER = "country-highlight";
 
 type Props = {
   camera: Camera;
-  legs: Leg[];
-  /** Progression du tracé de chaque tronçon (0→1) à la frame courante. */
-  legProgress: number[];
+  /** Tracés à dessiner à la frame courante (état de scène, déjà découpés). */
+  lines: SceneLine[];
   color: string;
   look: MapLook;
   /** Codes ISO des pays déjà atteints à la frame courante. */
@@ -190,8 +189,7 @@ const setReachedCountries = (map: mapboxgl.Map, codes: string[]) => {
  */
 export const MapScene = ({
   camera,
-  legs,
-  legProgress,
+  lines,
   color,
   look,
   reachedCountries,
@@ -300,6 +298,7 @@ export const MapScene = ({
         id: "route-glow",
         type: "line",
         source: ROUTE_SOURCE,
+        filter: ["==", ["get", "style"], "route"],
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": color, "line-width": 14, "line-opacity": 0.18, "line-blur": 6 },
       });
@@ -308,7 +307,7 @@ export const MapScene = ({
         id: "route-land",
         type: "line",
         source: ROUTE_SOURCE,
-        filter: ["==", ["get", "mode"], "land"],
+        filter: ["all", ["==", ["get", "style"], "route"], ["==", ["get", "mode"], "land"]],
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": color, "line-width": 4 },
       });
@@ -317,9 +316,26 @@ export const MapScene = ({
         id: "route-sea",
         type: "line",
         source: ROUTE_SOURCE,
-        filter: ["==", ["get", "mode"], "sea"],
+        filter: ["all", ["==", ["get", "style"], "route"], ["==", ["get", "mode"], "sea"]],
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": color, "line-width": 4, "line-dasharray": [0.2, 2.2] },
+      });
+      // Terroir : trait fin ferme → atelier, et cercle du rayon.
+      map.addLayer({
+        id: "spoke",
+        type: "line",
+        source: ROUTE_SOURCE,
+        filter: ["==", ["get", "style"], "spoke"],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": color, "line-width": 2, "line-opacity": 0.8 },
+      });
+      map.addLayer({
+        id: "radius-circle",
+        type: "line",
+        source: ROUTE_SOURCE,
+        filter: ["==", ["get", "style"], "circle"],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": color, "line-width": 2, "line-opacity": 0.9 },
       });
       mapRef.current = map;
       onReady(map);
@@ -344,9 +360,10 @@ export const MapScene = ({
 
     map.jumpTo({ center: camera.center, zoom: camera.zoom, bearing: 0, pitch: 0 });
 
-    const features = legs
-      .map((leg, i) => partialLine(leg, legProgress[i]))
-      .filter((f): f is GeoJSON.Feature<GeoJSON.LineString> => f !== null);
+    const features = lines.map((l) => ({
+      ...l.feature,
+      properties: { ...l.feature.properties, mode: l.mode, style: l.style },
+    }));
     (map.getSource(ROUTE_SOURCE) as mapboxgl.GeoJSONSource).setData({
       type: "FeatureCollection",
       features,

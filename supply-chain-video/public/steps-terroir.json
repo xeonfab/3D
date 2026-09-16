@@ -1,0 +1,40 @@
+{
+  "product": "Cidre Les Trois Vergers",
+  "narrative": "terroir",
+  "steps": [
+    {
+      "kind": "actor",
+      "title": "Verger de la Hunaudière",
+      "personName": "Marc",
+      "caption": "Pommes bitter-sweet, cueillies à la main",
+      "lat": 48.21,
+      "lng": -1.51,
+      "photo": "farm.jpg"
+    },
+    {
+      "kind": "actor",
+      "title": "Verger du Bois-Guy",
+      "caption": "Vieilles variétés greffées en 1992",
+      "lat": 48.25,
+      "lng": -1.47
+    },
+    {
+      "kind": "actor",
+      "title": "Ferme des Landes",
+      "caption": "Douce-Moën et Kermerrien",
+      "lat": 48.26,
+      "lng": -1.4
+    },
+    {
+      "kind": "actor",
+      "title": "Le Pressoir",
+      "personName": "Anne",
+      "caption": "Pressé et embouteillé sur place",
+      "city": "Liffré",
+      "lat": 48.22,
+      "lng": -1.5,
+      "photo": "roaster.jpg",
+      "final": true
+    }
+  ]
+}

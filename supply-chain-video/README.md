@@ -1,19 +1,25 @@
-# Vidéo animée de chaîne d'approvisionnement
+# Qui fait le produit — vidéo animée sur carte
 
-Génère une vidéo MP4 (9:16 et 16:9, 30 fps) qui suit un produit d'étape en
-étape sur une **vraie carte** (Mapbox GL JS, style `dark-v11`) avec de
-**vraies coordonnées** : arcs great-circle tracés progressivement, trajets
-maritimes qui contournent les terres via des waypoints, caméra `flyTo`
-pilotée frame par frame, cartouches, photos, logo et musique de fond.
+Génère une vidéo MP4 (9:16 et 16:9, 30 fps) qui montre **qui fait un
+produit** sur une **vraie carte** (Mapbox GL JS, style `dark-v11`, vraies
+coordonnées). Les héros sont les personnes : la vidéo ne raconte pas la
+logistique. Deux récits :
 
-Tout le contenu vient de deux fichiers JSON : `public/steps.json` (les
-étapes) et `public/brand.json` (la marque). Aucune donnée n'est codée en dur.
+- **origine** — un premier héros (la ferme), des acteurs intermédiaires, le
+  transport compressé en **un seul arc rapide sans texte**, puis le dernier
+  héros (l'atelier).
+- **terroir** — tout vient d'un rayon local : vue « Tout vient de moins de
+  N km », chaque ferme, puis l'atelier vers lequel tout converge.
+
+Tout le contenu vient de deux fichiers JSON dans `public/` : les étapes
+(`steps-origine.json`, `steps-terroir.json`…) et la marque (`brand.json`,
+`brand-terroir.json`…). Aucune donnée n'est codée en dur.
 
 ## Stack
 
 - [Remotion 4](https://www.remotion.dev/) + React + TypeScript
 - [Mapbox GL JS 3](https://docs.mapbox.com/mapbox-gl-js/) (token requis)
-- [turf.js](https://turfjs.org/) (`greatCircle`, `lineSliceAlong`, distances)
+- [turf.js](https://turfjs.org/) (`greatCircle`, `lineSliceAlong`, distances, cercle)
 
 ## Démarrage
 
@@ -21,105 +27,163 @@ Tout le contenu vient de deux fichiers JSON : `public/steps.json` (les
 cd supply-chain-video
 npm install
 cp .env.example .env        # puis renseigner REMOTION_MAPBOX_TOKEN=pk.…
-npm run check:route         # vérifie la géographie des routes (sans rendu)
+npm test                    # timeline : ratio actor ≥ 70 %, durées, aucun nom de transit
+npm run check:route         # géographie des routes (sans rendu)
 npm run dev                 # Remotion Studio : prévisualisation interactive
-npm run render:vertical     # → out/supply-chain-9x16.mp4  (1080×1920)
-npm run render:horizontal   # → out/supply-chain-16x9.mp4  (1920×1080)
+npm run render:origine      # → out/origine.mp4 (1080×1920)
+npm run render:terroir      # → out/terroir.mp4 (1080×1920)
+npm run render:origine:16x9 # → out/origine-16x9.mp4 (1920×1080)
+npm run render:terroir:16x9 # → out/terroir-16x9.mp4
 ```
 
-Le token Mapbox est lu depuis la variable d'environnement
-`REMOTION_MAPBOX_TOKEN` (le préfixe `REMOTION_` est nécessaire pour que
-Remotion l'expose au bundle rendu dans le navigateur). Un fichier `.env` à
-la racine du projet est chargé automatiquement ; on peut aussi l'exporter
-dans le shell.
+Le token Mapbox est lu depuis `REMOTION_MAPBOX_TOKEN` (préfixe `REMOTION_`
+obligatoire pour que Remotion l'expose au bundle). Un `.env` à la racine du
+projet est chargé automatiquement.
+
+Les compositions `SupplyChainVertical` (9:16) et `SupplyChainHorizontal`
+(16:9) prennent deux props : `stepsPath` et `brandPath` (fichiers de
+`public/`). En Studio, modifiez-les dans le panneau *Props* ; en ligne de
+commande :
+
+```sh
+npx remotion render SupplyChainVertical out/ma-video.mp4 \
+  --props='{"stepsPath":"steps-terroir.json","brandPath":"brand-terroir.json"}'
+```
 
 ### Rendu sur un serveur sans GPU
 
-Mapbox a besoin de WebGL. Le fichier `remotion.config.ts` sélectionne
-`angle` ; sur une machine sans GPU (CI, conteneur), forcez le rendu logiciel :
+Mapbox a besoin de WebGL. `remotion.config.ts` sélectionne `angle` ; sur une
+machine sans GPU (CI, conteneur) forcez le rendu logiciel :
 
 ```sh
-npx remotion render SupplyChainVertical out/supply-chain-9x16.mp4 --gl=swangle
+npx remotion render SupplyChainVertical out/origine.mp4 --gl=swangle
 ```
 
 Si Remotion ne peut pas télécharger son Chrome headless, indiquez un binaire
 `chrome-headless-shell` local avec `--browser-executable=/chemin/vers/headless_shell`.
 
-## Changer le contenu : `public/steps.json`
+### Aperçu sans token ni réseau
+
+`REMOTION_MAP_OFFLINE=1` remplace la carte Mapbox par un fond Natural Earth
+50 m en SVG (projection Mercator). Utile pour vérifier la timeline, les
+tracés et les overlays hors ligne — ce n'est **pas** le rendu final.
+
+```sh
+REMOTION_MAP_OFFLINE=1 npm run render:origine
+```
+
+## Schéma : `public/steps-*.json`
 
 ```json
 {
   "product": "Éthiopie Guji nature",
+  "narrative": "origine",
+  "intermediariesCount": 2,
+  "sourcingLine": "Acheté en direct à la coopérative",
   "steps": [
-    { "title": "Ferme Kayon Mountain", "caption": "Récolte à la main, nov.–janv.",
+    { "kind": "actor", "title": "Ferme Kayon Mountain", "personName": "Tadesse",
+      "caption": "Récolte à la main, novembre à janvier",
       "lat": 5.75, "lng": 38.9, "photo": "farm.jpg", "mode": "land" },
-    { "title": "Port de Djibouti", "caption": "Départ en conteneur",
-      "lat": 11.6, "lng": 43.15, "mode": "sea",
-      "waypoints": [[11.75, 43.45], [12.2, 43.45], [12.55, 43.37], "…"] },
-    { "title": "Atelier, Rennes", "caption": "Torréfié en petit lot chaque semaine",
-      "lat": 48.11, "lng": -1.68, "photo": "roaster.jpg", "mode": "land", "final": true }
+    { "kind": "transit", "title": "Port de Djibouti", "lat": 11.6, "lng": 43.15,
+      "mode": "sea", "waypoints": [[11.75, 43.45], "…"] },
+    { "kind": "actor", "title": "Atelier de Lucie", "personName": "Lucie",
+      "caption": "Torréfié en petit lot chaque semaine", "city": "Rennes",
+      "lat": 48.11, "lng": -1.68, "photo": "roaster.jpg", "final": true }
   ]
 }
 ```
 
+Niveau produit :
+
 | Champ | Rôle |
 | --- | --- |
-| `title`, `caption` | Texte du cartouche affiché à l'arrêt sur l'étape. |
-| `lat`, `lng` | Coordonnées réelles de l'étape (degrés décimaux). |
-| `photo` | Optionnel. Fichier image dans `public/`, affiché en bas à droite, coins arrondis. |
-| `mode` | `"land"` ou `"sea"` : mode du **trajet qui part de cette étape** vers la suivante. Un trajet `sea` est tracé en pointillés. |
-| `waypoints` | Points de passage `[lat, lng]` du trajet qui part de cette étape. **Obligatoire pour `sea`** : c'est le JSON qui porte la route (détroits, canaux, caps), le code ne fait que relier les points par des arcs great-circle. |
-| `country` | Optionnel. Code ISO 3166-1 alpha-2 (`"FR"`, `"ET"`…) : le pays se teinte dans la couleur de marque quand l'étape est atteinte. |
-| `final` | Marque l'étape d'arrivée : zoom serré sur la ville, puis écran de fin. |
+| `product` | Nom du produit (sous-titre de l'intro en mode origine : « Qui fait {product} »). |
+| `narrative` | `"origine"` ou `"terroir"`. |
+| `intermediariesCount` | Nombre ou `null`. Origine : une seule ligne « N intermédiaires » au milieu de l'arc de transit. |
+| `sourcingLine` | Chaîne ou `null`. Affichée à la place si `intermediariesCount` n'est pas un nombre. |
+| `timing`, `camera` | Optionnels, voir plus bas. |
 
-La durée est calculée automatiquement : arrêt sur chaque étape + vol entre
-étapes (durée proportionnelle au logarithme de la distance) + écran de fin.
-Avec l'exemple (6 étapes) on obtient ≈ 49 s. Le rythme et la caméra se
-règlent sans toucher au code, via des blocs optionnels dans `steps.json` :
+Niveau étape :
+
+| Champ | Rôle |
+| --- | --- |
+| `kind` | **Obligatoire.** `"actor"` (quelqu'un fait le produit ici) ou `"transit"` (simple passage). Le premier et le dernier step sont toujours `actor` ; en mode terroir tous les steps sont `actor` et le dernier est l'atelier. Erreur claire sinon. |
+| `title` | Nom du lieu. Jamais affiché pour un transit. |
+| `personName` | Actor uniquement. Affiché en grand sur le cartouche. |
+| `caption` | Texte sous le titre. Ignoré pour un transit. |
+| `city` | Optionnel. Ville mise en évidence sur le cartouche (recommandé pour l'atelier). |
+| `lat`, `lng` | Coordonnées réelles (degrés décimaux). |
+| `photo` | Fichier image dans `public/`. Ignoré pour un transit. Grand format pour le premier et le dernier actor, vignette pour les autres. |
+| `mode` | `"land"` (défaut) ou `"sea"` : mode du **trajet qui part de cette étape**. Un tronçon `sea` est tracé en pointillés. |
+| `waypoints` | Points de passage `[lat, lng]` du trajet qui part de cette étape. **Obligatoire pour `sea`** : c'est le JSON qui porte la route (détroits, canaux, caps), le code relie les points par des arcs great-circle et ne traverse jamais une terre de lui-même. |
+| `country` | Optionnel, ISO alpha-2 : le pays se teinte dans la couleur de marque quand l'actor est atteint. |
+| `final` | Marque l'étape d'arrivée (zoom ville). |
+
+## Les deux timelines
+
+Règle stricte : les plans actor occupent **au moins 70 %** du temps
+(actor + transit), les transits au plus 30 %. La durée des transits est
+plafonnée en conséquence, et `npm test` le vérifie sur les deux JSON.
+
+**Origine** (≈ 32 s avec l'exemple) :
+
+1. Intro 3 s — logo en fondu, « Qui fait {product} ».
+2. Premier actor 8 s — caméra déjà posée, pas de vol d'entrée. Photo grand
+   format (bas plein cadre en 9:16, tiers droit en 16:9). Cartouche :
+   `personName` en grand, `title`, `caption`.
+3. Actors intermédiaires 6 s chacun (vol court d'entrée compris), vignette photo.
+4. Transits consécutifs fusionnés en **un seul vol de 3 s max** : dézoom
+   vers la région / le globe, un arc continu se dessine en accéléré à travers
+   tous les points de transit. Aucun cartouche, aucun nom. Au milieu de l'arc,
+   une seule ligne : « N intermédiaires » ou `sourcingLine`.
+5. Dernier actor 8 s — zoom ville, photo grand format, cartouche avec la
+   ville (`city`) en évidence.
+6. Fin 4 s — carte fixe assombrie, logo + `endLine`.
+
+**Terroir** (≈ 38 s avec l'exemple) :
+
+1. Intro 3 s — « Tout vient d'ici ».
+2. Vue rayon 5 s — caméra sur l'atelier, cadrage de toutes les fermes, cercle
+   fin de rayon = distance max atelier → fermes arrondie à la dizaine de km,
+   mention « Tout vient de moins de N km ». Les fermes s'allument une à une.
+3. Par ferme 6 s — vol court, point pulsant, photo, cartouche. Pas de tracé
+   entre fermes ; un trait fin ferme → atelier apparaît quand on quitte la ferme.
+4. Atelier 8 s — retour au centre, tous les traits convergent, photo grand format.
+5. Fin 4 s.
+
+Cartouches et photos apparaissent en 300 ms et ont disparu 300 ms avant le
+vol suivant. Aucun texte de logistique n'est affiché, même s'il est dans le
+JSON : les titres des transits ne sont jamais transmis aux overlays
+(`src/scene.ts` est une fonction pure, testée frame par frame).
+
+Réglages de rythme et de caméra, tous optionnels (défauts dans `src/defaults.ts`) :
 
 ```json
 {
-  "timing": { "holdSeconds": 4, "travelMinSeconds": 2.5, "travelMaxSeconds": 5,
-              "travelMaxDistanceKm": 5000, "introSeconds": 1, "endingSeconds": 3, "fps": 30 },
-  "camera": { "zoomCity": 11, "zoomWorld": 5, "flightPaddingPx": 140 }
+  "timing": { "fps": 30, "introSeconds": 3, "firstActorSeconds": 8, "lastActorSeconds": 8,
+              "actorSeconds": 6, "actorFlightSeconds": 1.5, "lastActorFlightSeconds": 2,
+              "transitMaxSeconds": 3, "minActorRatio": 0.7, "radiusSeconds": 5,
+              "cardFadeSeconds": 0.3, "endingSeconds": 4 },
+  "camera": { "zoomCity": 11, "zoomWorld": 5, "flightPaddingPx": 140, "farmZoomOffset": 1.2 }
 }
 ```
 
-(Valeurs par défaut dans `src/defaults.ts`.) Le zoom d'arrêt d'une étape est
-dérivé de la distance à l'étape voisine la plus proche : serré pour deux
-sites dans la même vallée, large pour un port qui précède une traversée. En
-vol, la caméra suit la trajectoire de `flyTo` (van Wijk & Nuij) et dézoome
-juste assez pour garder le tronçon entier à l'écran.
+## Vérifier les routes maritimes
 
-### Placer les waypoints maritimes
-
-Le great-circle brut Djibouti → Bordeaux traverse l'Afrique. La route de
-l'exemple passe donc par Bab-el-Mandeb, la mer Rouge, le golfe de Suez, le
-canal (Suez → Ismaïlia → Port-Saïd), le sud de la Crète et de Malte, le cap
-Bon, la mer d'Alboran, Gibraltar, les caps Saint-Vincent, da Roca et
-Finisterre, le golfe de Gascogne, Ouessant et la Manche jusqu'au Havre. Chaque paire de points consécutifs est reliée
-par un arc great-circle : plus deux waypoints sont éloignés, plus l'arc
-« bombe » et risque de mordre une côte. Densifiez les points le long des
-côtes et dans les détroits.
-
-`npm run check:route` valide tout cela sans rendre la vidéo :
+`npm run check:route` échantillonne chaque tronçon `sea` tous les 5 km contre
+les polygones terrestres Natural Earth 50 m. Un canal ou un port fluvial
+apparaît comme un court passage « sur terre » (le trait de côte ne dessine
+pas les canaux) ; au-delà de `--max-land-km` (200 km) le script échoue et
+indique où ajouter des waypoints. Il écrit aussi `out/route-check*.svg`.
 
 ```
 [2→3] Port de Djibouti → Port du Havre (sea)
-   route   8340.2 km   direct   5763.7 km
    passages sur terre : 1 (150 km au total)
    ~   150 km autour de [30.63, 32.30]  (canal / port : normal)   ← canal de Suez
 ✓ routes cohérentes
 ```
 
-Le script échantillonne chaque tronçon `sea` tous les 5 km contre les
-polygones terrestres Natural Earth 50 m (`world-atlas`). Un canal ou un
-port fluvial apparaît comme un court passage « sur terre » (le trait de côte ne
-dessine pas les canaux) ; au-delà de `--max-land-km` (200 km par défaut) le
-script échoue et indique la position du problème. Il écrit aussi
-`out/route-check.svg`, une carte terres + route pour contrôle visuel.
-
-## Changer la marque : `public/brand.json`
+## Marque : `public/brand*.json`
 
 ```json
 {
@@ -128,64 +192,41 @@ script échoue et indique la position du problème. Il écrit aussi
   "logo": "logo.png",
   "endLine": "Récolté en janvier. Torréfié mardi dernier.",
   "music": "music.mp3",
-  "musicGainDb": -18
+  "musicGainDb": -18,
+  "map": { "globe": true, "atmosphere": true, "hillshade": true, "coastline": true,
+           "countries": true, "highlightCountries": true, "vehicle": true,
+           "seaColor": "#0a1220", "landColor": "#1f2329" }
 }
 ```
 
-- `color` : couleur des tracés, des points pulsants et des accents (hex `#RRGGBB`).
-- `logo` : fichier dans `public/`, affiché sur l'écran de fin (3 s, carte fixe).
-- `endLine` : ligne de fin sous le logo.
-- `music` / `musicGainDb` : musique de fond et gain (défaut `music.mp3` à −18 dB).
-- `map` : habillage de la carte, optionnel. Toutes les clés ont une valeur par
-  défaut (`src/defaults.ts`) ; on ne précise que ce qu'on change :
-
-```json
-"map": {
-  "globe": true,              "atmosphere": true,
-  "hillshade": true,          "coastline": true,
-  "countries": true,          "highlightCountries": true,
-  "vehicle": true,
-  "seaColor": "#0a1220",      "landColor": "#1f2329"
-}
-```
-
-  - `globe` + `atmosphere` : Terre ronde, halo d'horizon et étoiles quand la
-    caméra dézoome (vols intercontinentaux) ; Mercator classique en zoom serré.
-  - `hillshade` : ombrage du relief (MNT Mapbox Terrain, vraies altitudes).
-  - `seaColor` / `landColor` : contraste terre / mer ; `coastline` ajoute un
-    liseré le long des côtes ; `countries` renforce frontières et noms de pays.
-  - `highlightCountries` : teinte les pays des étapes (champ `country`).
-  - `vehicle` : bateau sur un tronçon `sea`, camion sur un tronçon `land`, à
-    la tête du tracé, orienté dans le sens de la marche.
-  Couleurs fines (atmosphère, côtes, frontières, opacité de la teinte) dans
-  `src/defaults.ts`.
+- `color` : tracés, points, cercle, accents. `logo` : intro et fin. `endLine` : ligne de fin.
+- `music` / `musicGainDb` : musique de fond (défaut `music.mp3` à −18 dB).
+- `map` (optionnel, chaque clé a un défaut) : globe + atmosphère aux petits
+  zooms, relief (MNT Mapbox Terrain), contraste terre / mer, liseré de côte,
+  frontières et noms de pays renforcés, pays des actors teintés, bateau /
+  camion à la tête du tracé.
 
 ## Fichiers médias
 
-Déposez dans `public/` : les photos référencées par `photo`, le logo et
-`music.mp3`. Les fichiers fournis ici (`farm.jpg`, `roaster.jpg`, `logo.png`,
-`music.mp3`) sont des **substituts** générés par `npm run assets:placeholders`
-(la musique de substitution est une nappe synthétique, la vraie musique doit
-être remplacée avant diffusion).
+Déposez dans `public/` les photos, le logo et `music.mp3`. Les fichiers
+fournis (`farm.jpg`, `roaster.jpg`, `logo.png`, `music.mp3`) sont des
+**substituts** générés par `npm run assets:placeholders` ; la musique est une
+nappe synthétique à remplacer avant diffusion.
 
 ## Comment ça marche
 
-- `src/Root.tsx` déclare les deux compositions (`SupplyChainVertical`
-  1080×1920, `SupplyChainHorizontal` 1920×1080) ; `calculateMetadata`
-  charge les JSON et calcule la durée.
-- `src/geo.ts` construit chaque tronçon avec `turf.greatCircle` entre
-  points consécutifs (étape → waypoints → étape) et découpe la portion déjà
-  parcourue (`lineSliceAlong`) pour le tracé progressif.
-- `src/timeline.ts` découpe la vidéo en phases (arrêt / vol / fin) et donne,
-  pour un numéro de frame, la caméra et la progression de chaque tronçon.
-- `src/camera.ts` reproduit la trajectoire de `map.flyTo` sous forme de
-  fonction pure `t ↦ (centre, zoom)`, plus la projection Web Mercator qui
-  place les overlays HTML exactement sur la carte.
-- `src/MapScene.tsx` pilote Mapbox : à chaque frame, `jumpTo` + mise à jour
-  de la source GeoJSON, puis `delayRender` jusqu'à l'événement `idle`
-  (tuiles chargées). Aucun `setTimeout`, aucune animation interne à Mapbox :
-  la sortie ne dépend que de `useCurrentFrame`, donc le rendu est
-  déterministe.
-- `src/overlays/` : point pulsant, cartouche, photo, écran de fin. Les
-  dimensions dérivent de la taille de la composition pour servir les deux
-  formats avec le même code.
+- `src/timeline.ts` — fonction pure : étapes + récit + rythme → segments
+  (`intro`, `actor`, `transit`, `radius`, `ending`) en frames.
+- `src/scene.ts` — fonction pure : contexte + frame → état à afficher
+  (caméra, tracés découpés, points, cartouche, ligne de transit, rayon).
+- `src/timeline.test.ts` — `node --test` : ratio ≥ 70 %, durées 30–40 s,
+  héros en grand, aucun nom de transit dans les overlays, validation `kind`.
+- `src/camera.ts` — trajectoire de `map.flyTo` (van Wijk & Nuij) en fonction
+  pure de t, projection Web Mercator, cadrage d'une emprise.
+- `src/geo.ts` — arcs great-circle (turf), chaîne de transit, rayons
+  ferme → atelier, cercle géodésique, découpe progressive.
+- `src/MapScene.tsx` — Mapbox piloté frame par frame : `jumpTo` + mise à
+  jour des sources, puis `delayRender` jusqu'à `idle`. Aucun `setTimeout`.
+- `src/OfflineMap.tsx` — fond Natural Earth en SVG (mode hors ligne).
+- `src/overlays/` — `Card`, `Photo`, `Intro`, `TransitLine`, `RadiusLine`,
+  `Ending`, `Pulse`, `Vehicle`.

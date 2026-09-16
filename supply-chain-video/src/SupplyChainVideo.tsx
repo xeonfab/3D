@@ -5,57 +5,39 @@ import { AbsoluteFill, Audio, staticFile, useCurrentFrame, useVideoConfig } from
 import { toScreen } from "./camera";
 import { dbToGain, resolveCamera, resolveLook, resolveTiming } from "./data";
 import { DEFAULT_MUSIC_FILE, DEFAULT_MUSIC_GAIN_DB, GLOBE_HIDE_KM } from "./defaults";
-import { buildLegs, pointAlong } from "./geo";
 import { MapScene } from "./MapScene";
-import { Cartouche } from "./overlays/Cartouche";
+import { OfflineMap } from "./OfflineMap";
+import { Card } from "./overlays/Card";
 import { Ending } from "./overlays/Ending";
+import { Intro } from "./overlays/Intro";
 import { useLayout } from "./overlays/layout";
 import { Photo } from "./overlays/Photo";
 import { Pulse } from "./overlays/Pulse";
+import { RadiusLine } from "./overlays/RadiusLine";
+import { TransitLine } from "./overlays/TransitLine";
 import { Vehicle } from "./overlays/Vehicle";
-import { buildTimeline, cameraAt, legProgressAt, phaseAt } from "./timeline";
+import { buildSceneContext, sceneAt } from "./scene";
 import type { LngLat, VideoProps } from "./types";
+
+/** Sans token / réseau : fond Natural Earth en SVG (REMOTION_MAP_OFFLINE=1). */
+const OFFLINE = process.env.REMOTION_MAP_OFFLINE === "1";
 
 export const SupplyChainVideo = ({ stepsFile, brand }: VideoProps) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const L = useLayout();
-  const { steps, product } = stepsFile;
-  const color = brand.color;
 
-  const timing = useMemo(() => resolveTiming(stepsFile), [stepsFile]);
-  const camSettings = useMemo(() => resolveCamera(stepsFile), [stepsFile]);
-  const look = useMemo(() => resolveLook(brand), [brand]);
-  const legs = useMemo(() => buildLegs(steps), [steps]);
-  const timeline = useMemo(
-    () => buildTimeline(steps, legs, timing, camSettings),
-    [steps, legs, timing, camSettings],
-  );
-
-  const musicGain = dbToGain(brand.musicGainDb ?? DEFAULT_MUSIC_GAIN_DB);
-  const viewport = { width, height };
-  const camera = cameraAt(timeline, legs, frame, viewport, camSettings);
-  const legProgress = legProgressAt(timeline, legs, frame);
-  const phase = phaseAt(timeline, frame);
-
-  // Étape courante (pendant un vol : celle de départ, jusqu'à l'arrivée).
-  const currentStep = phase.kind === "travel" ? legs[phase.leg].from : phase.step;
-  const holdPhases = timeline.phases.filter((p) => p.kind === "hold");
-  const ending = timeline.phases.find((p) => p.kind === "ending");
-
-  // Pays déjà atteints (teinte de marque) : ceux des étapes jusqu'à la courante.
-  const reachedCountries = useMemo(
+  const ctx = useMemo(
     () =>
-      Array.from(
-        new Set(
-          steps
-            .slice(0, currentStep + 1)
-            .map((s) => s.country)
-            .filter((c): c is string => Boolean(c)),
-        ),
-      ),
-    [steps, currentStep],
+      stepsFile
+        ? buildSceneContext(stepsFile, resolveTiming(stepsFile), resolveCamera(stepsFile), {
+            width,
+            height,
+          })
+        : null,
+    [stepsFile, width, height],
   );
+  const look = useMemo(() => (brand ? resolveLook(brand) : null), [brand]);
 
   /*
    * Projection des overlays : en projection globe, la position écran d'un
@@ -69,6 +51,14 @@ export const SupplyChainVideo = ({ stepsFile, brand }: VideoProps) => {
     mapRef.current = map;
   }, []);
   const onFrameApplied = useCallback((f: number) => setAppliedFrame(f), []);
+
+  if (!ctx || !stepsFile || !brand || !look) return <AbsoluteFill style={{ background: "#0b0b0e" }} />;
+
+  const scene = sceneAt(ctx, frame);
+  const { camera } = scene;
+  const color = brand.color;
+  const { steps } = stepsFile;
+  const musicGain = dbToGain(brand.musicGainDb ?? DEFAULT_MUSIC_GAIN_DB);
 
   const project = (lngLat: LngLat): [number, number] | null => {
     const map = mapRef.current;
@@ -89,89 +79,106 @@ export const SupplyChainVideo = ({ stepsFile, brand }: VideoProps) => {
   const onScreen = (p: [number, number] | null): p is [number, number] =>
     p !== null && p[0] > -100 && p[0] < width + 100 && p[1] > -100 && p[1] < height + 100;
 
-  // Tête du tracé pendant un vol : position + sens du déplacement.
-  const head = (() => {
-    if (phase.kind !== "travel") return null;
-    const leg = legs[phase.leg];
-    const t = legProgress[phase.leg];
-    const now = project(pointAlong(leg, t));
-    const before = project(pointAlong(leg, Math.max(0, t - 0.01)));
-    if (!onScreen(now)) return null;
-    const dirX = before ? Math.sign(now[0] - before[0]) || 1 : 1;
-    return { x: now[0], y: now[1], dirX, mode: leg.mode };
-  })();
+  const headPos = scene.head ? project(scene.head.lngLat) : null;
+  const prevHead =
+    scene.head && frame > 0 ? sceneAt(ctx, frame - 1).head : null;
+  const prevHeadPos = prevHead ? project(prevHead.lngLat) : null;
+  const dirX = headPos && prevHeadPos ? Math.sign(headPos[0] - prevHeadPos[0]) || 1 : 1;
+  const transitPos = scene.transitLine ? project(scene.transitLine.anchor) : null;
 
   return (
     <AbsoluteFill style={{ background: "#0b0b0e" }}>
-      <MapScene
-        camera={camera}
-        legs={legs}
-        legProgress={legProgress}
-        color={color}
-        look={look}
-        reachedCountries={reachedCountries}
-        onReady={onReady}
-        onFrameApplied={onFrameApplied}
-      />
+      {OFFLINE ? (
+        <OfflineMap camera={camera} lines={scene.lines} color={color} />
+      ) : (
+        <MapScene
+          camera={camera}
+          lines={scene.lines}
+          color={color}
+          look={look}
+          reachedCountries={scene.reachedCountries}
+          onReady={onReady}
+          onFrameApplied={onFrameApplied}
+        />
+      )}
 
-      {/* Points des étapes déjà atteintes (dont l'étape courante, pulsante). */}
-      {steps.map((step, i) => {
-        const hold = holdPhases[i];
-        if (hold.kind !== "hold" || frame < hold.start) return null;
+      {/* Points des actors atteints (le courant pulse). */}
+      {scene.points.map((pt) => {
+        const step = steps[pt.step];
         const p = project([step.lng, step.lat]);
         if (!onScreen(p)) return null;
-        const active = i === currentStep || (phase.kind === "ending" && i === phase.step) ? 1 : 0;
         return (
           <Pulse
-            key={i}
+            key={pt.step}
             x={p[0]}
             y={p[1]}
             color={color}
-            active={active}
-            appearFrame={hold.start}
+            active={pt.active ? 1 : 0}
+            appearFrame={pt.appearFrame}
           />
         );
       })}
 
-      {/* Tête du tracé en cours de vol : véhicule ou simple point. */}
-      {head && phase.kind === "travel" ? (
+      {/* Tête du tracé pendant un vol : véhicule (ou point si désactivé). */}
+      {scene.head && onScreen(headPos) ? (
         look.vehicle ? (
           <Vehicle
-            x={head.x}
-            y={head.y}
-            dirX={head.dirX}
-            mode={head.mode}
+            x={headPos[0]}
+            y={headPos[1]}
+            dirX={dirX}
+            mode={scene.head.mode}
             color={color}
             size={L.vehicleSize}
           />
         ) : (
-          <Pulse x={head.x} y={head.y} color={color} active={0} appearFrame={phase.start} />
+          <Pulse x={headPos[0]} y={headPos[1]} color={color} active={0} appearFrame={0} />
         )
       ) : null}
 
-      {/* Cartouche + photo pendant l'arrêt sur chaque étape. */}
-      {steps.map((step, i) => {
-        const hold = holdPhases[i];
-        if (hold.kind !== "hold" || frame < hold.start || frame >= hold.end) return null;
-        return (
-          <div key={i}>
-            <Cartouche
-              title={step.title}
-              caption={step.caption}
-              color={color}
-              index={i}
-              total={steps.length}
-              start={hold.start}
-              end={hold.end}
+      {scene.card ? (
+        <>
+          {scene.card.photo ? (
+            <Photo
+              file={scene.card.photo}
+              large={scene.card.large}
+              start={scene.card.start}
+              end={scene.card.end}
             />
-            {step.photo ? <Photo file={step.photo} start={hold.start} end={hold.end} /> : null}
-          </div>
-        );
-      })}
-
-      {ending && frame >= ending.start ? (
-        <Ending brand={brand} product={product} start={ending.start} />
+          ) : null}
+          <Card card={scene.card} color={color} />
+        </>
       ) : null}
+
+      {scene.transitLine && onScreen(transitPos) ? (
+        <TransitLine
+          text={scene.transitLine.text}
+          x={transitPos[0]}
+          y={transitPos[1]}
+          color={color}
+          start={scene.transitLine.start}
+          end={scene.transitLine.end}
+        />
+      ) : null}
+
+      {scene.radiusLine ? (
+        <RadiusLine
+          text={scene.radiusLine.text}
+          color={color}
+          start={scene.radiusLine.start}
+          end={scene.radiusLine.end}
+        />
+      ) : null}
+
+      {scene.intro ? (
+        <Intro
+          brand={brand}
+          subtitle={scene.intro.subtitle}
+          start={scene.intro.start}
+          end={scene.intro.end}
+        />
+      ) : null}
+
+      {scene.ending ? <Ending brand={brand} start={scene.ending.start} /> : null}
 
       {/* Musique de fond : gain constant (dB → linéaire), défini dans brand.json. */}
       <Audio

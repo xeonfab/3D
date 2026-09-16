@@ -1,31 +1,35 @@
 import { Composition, type CalculateMetadataFunction } from "remotion";
-import { loadBrand, loadSteps, resolveCamera, resolveTiming } from "./data";
-import { buildLegs } from "./geo";
+import { loadBrand, loadSteps, resolveTiming } from "./data";
+import { DEFAULT_BRAND_PATH, DEFAULT_STEPS_PATH } from "./defaults";
 import { SupplyChainVideo } from "./SupplyChainVideo";
 import { buildTimeline } from "./timeline";
 import type { VideoProps } from "./types";
 
 /**
- * Charge steps.json + brand.json et calcule la durée de la vidéo à partir
- * du nombre d'étapes et des distances. Les props par défaut sont vides :
- * tout le contenu vient des fichiers JSON.
+ * Charge les JSON désignés par les props (`stepsPath`, `brandPath`, dans
+ * `public/`) et calcule la durée depuis la timeline. Exemple :
+ *   npx remotion render SupplyChainVertical out/terroir.mp4 \
+ *     --props='{"stepsPath":"steps-terroir.json","brandPath":"brand-terroir.json"}'
  */
-const calculateMetadata: CalculateMetadataFunction<VideoProps> = async () => {
-  const [stepsFile, brand] = await Promise.all([loadSteps(), loadBrand()]);
+const calculateMetadata: CalculateMetadataFunction<VideoProps> = async ({ props }) => {
+  const [stepsFile, brand] = await Promise.all([
+    loadSteps(props.stepsPath),
+    loadBrand(props.brandPath),
+  ]);
   const timing = resolveTiming(stepsFile);
-  const legs = buildLegs(stepsFile.steps);
-  const timeline = buildTimeline(stepsFile.steps, legs, timing, resolveCamera(stepsFile));
+  const timeline = buildTimeline(stepsFile, timing);
   return {
-    props: { stepsFile, brand },
+    props: { ...props, stepsFile, brand },
     fps: timing.fps,
     durationInFrames: timeline.durationInFrames,
   };
 };
 
-// Props de substitution le temps que calculateMetadata charge les JSON.
-const placeholder: VideoProps = {
-  stepsFile: { product: "", steps: [] },
-  brand: { name: "", color: "#000000", logo: "", endLine: "" },
+const defaultProps: VideoProps = {
+  stepsPath: DEFAULT_STEPS_PATH,
+  brandPath: DEFAULT_BRAND_PATH,
+  stepsFile: null,
+  brand: null,
 };
 
 export const RemotionRoot = () => (
@@ -37,7 +41,7 @@ export const RemotionRoot = () => (
       height={1920}
       fps={30}
       durationInFrames={1}
-      defaultProps={placeholder}
+      defaultProps={defaultProps}
       calculateMetadata={calculateMetadata}
     />
     <Composition
@@ -47,7 +51,7 @@ export const RemotionRoot = () => (
       height={1080}
       fps={30}
       durationInFrames={1}
-      defaultProps={placeholder}
+      defaultProps={defaultProps}
       calculateMetadata={calculateMetadata}
     />
   </>

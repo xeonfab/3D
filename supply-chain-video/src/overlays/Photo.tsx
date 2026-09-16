@@ -1,35 +1,69 @@
 import { Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { DEFAULT_TIMING } from "../defaults";
+import { fadeInOut } from "./fade";
 import { useLayout } from "./layout";
 
 type Props = {
   file: string;
+  /** Héros : bas plein cadre en 9:16, tiers droit en 16:9. Sinon vignette bas droite. */
+  large: boolean;
   start: number;
   end: number;
+  fadeSeconds?: number;
 };
 
-/** Photo de l'étape, coin bas droit, coins arrondis. */
-export const Photo = ({ file, start, end }: Props) => {
+export const Photo = ({ file, large, start, end, fadeSeconds = DEFAULT_TIMING.cardFadeSeconds }: Props) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
   const L = useLayout();
-
-  const opacity = interpolate(
-    frame,
-    [start + fps * 0.15, start + fps * 0.55, end - fps * 0.3, end],
-    [0, 1, 1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
-  const scale = interpolate(frame, [start, start + fps * 0.55], [0.92, 1], {
+  const fade = Math.round(fadeSeconds * fps);
+  const opacity = fadeInOut(frame, start, end, fade);
+  const scale = interpolate(frame, [start, start + fade], [0.96, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+
+  if (large) {
+    const style = L.portrait
+      ? {
+          left: 0,
+          bottom: 0,
+          width,
+          height: L.largePhotoHeight,
+          // Fondu vers la carte sur le haut de la photo.
+          maskImage: "linear-gradient(to top, black 78%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to top, black 78%, transparent 100%)",
+        }
+      : {
+          right: 0,
+          top: 0,
+          width: L.largePhotoWidth,
+          height,
+          maskImage: "linear-gradient(to right, transparent 0%, black 18%)",
+          WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 18%)",
+        };
+    return (
+      <div style={{ position: "absolute", ...style, opacity, overflow: "hidden" }}>
+        <Img
+          src={staticFile(file)}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+            transform: `scale(${scale})`,
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
       style={{
         position: "absolute",
         right: L.margin,
-        bottom: L.photoBottom,
+        bottom: L.margin,
         width: L.photoSize,
         height: L.photoSize,
         borderRadius: L.radius,

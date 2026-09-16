@@ -1,24 +1,47 @@
 import type { CameraSettings, MapLook, Timing } from "./types";
 
 /**
- * Valeurs de rythme par défaut, toutes surchargeables depuis
- * `steps.json` → `"timing": { … }`. Avec 5 étapes on obtient ≈ 40 s.
+ * Rythme par défaut, surchargeable depuis `steps-*.json` → `"timing"`.
+ * Origine (3 actors, 1 transit) : 3 + 8 + 6 + 3 + 8 + 4 = 32 s.
+ * Terroir (3 fermes + atelier) : 3 + 5 + 3×6 + 8 + 4 = 38 s.
  */
 export const DEFAULT_TIMING: Timing = {
   fps: 30,
-  introSeconds: 1,
-  holdSeconds: 4,
-  travelMinSeconds: 2.5,
-  travelMaxSeconds: 5,
-  travelMaxDistanceKm: 5000,
-  endingSeconds: 3,
+  introSeconds: 3,
+  firstActorSeconds: 8,
+  lastActorSeconds: 8,
+  actorSeconds: 6,
+  actorFlightSeconds: 1.5,
+  lastActorFlightSeconds: 2,
+  transitMaxSeconds: 3,
+  minActorRatio: 0.7,
+  radiusSeconds: 5,
+  cardFadeSeconds: 0.3,
+  endingSeconds: 4,
 };
+
+/** Fichiers par défaut dans `public/` (surchargeables par les props de rendu). */
+export const DEFAULT_STEPS_PATH = "steps-origine.json";
+export const DEFAULT_BRAND_PATH = "brand.json";
+
+/** Textes de l'intro selon le récit ; `{product}` est remplacé. */
+export const INTRO_SUBTITLE: Record<"origine" | "terroir", string> = {
+  origine: "Qui fait {product}",
+  terroir: "Tout vient d'ici",
+};
+/** Terroir : mention de la vue rayon ; `{km}` est remplacé. */
+export const RADIUS_LINE = "Tout vient de moins de {km} km";
+/** Origine : ligne au milieu de l'arc de transit ; `{n}` est remplacé. */
+export const INTERMEDIARIES_LINE = "{n} intermédiaires";
+/** Terroir : arrondi du rayon (km). */
+export const RADIUS_ROUND_KM = 10;
 
 /** Réglages de caméra par défaut, surchargeables via `steps.json` → `"camera"`. */
 export const DEFAULT_CAMERA: CameraSettings = {
   zoomCity: 11,
   zoomWorld: 5,
   flightPaddingPx: 140,
+  farmZoomOffset: 1.2,
 };
 
 /** Habillage par défaut, surchargeable via `brand.json` → `"map"`. */

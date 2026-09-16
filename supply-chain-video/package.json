@@ -5,10 +5,13 @@
   "description": "Vidéo animée de chaîne d'approvisionnement (Remotion 4 + Mapbox GL JS)",
   "scripts": {
     "dev": "remotion studio",
-    "render:vertical": "remotion render SupplyChainVertical out/supply-chain-9x16.mp4",
-    "render:horizontal": "remotion render SupplyChainHorizontal out/supply-chain-16x9.mp4",
-    "render": "npm run render:vertical && npm run render:horizontal",
-    "check:route": "tsx scripts/check-route.ts",
+    "render:origine": "remotion render SupplyChainVertical out/origine.mp4 --props='{\"stepsPath\":\"steps-origine.json\",\"brandPath\":\"brand.json\"}'",
+    "render:terroir": "remotion render SupplyChainVertical out/terroir.mp4 --props='{\"stepsPath\":\"steps-terroir.json\",\"brandPath\":\"brand-terroir.json\"}'",
+    "render:origine:16x9": "remotion render SupplyChainHorizontal out/origine-16x9.mp4 --props='{\"stepsPath\":\"steps-origine.json\",\"brandPath\":\"brand.json\"}'",
+    "render:terroir:16x9": "remotion render SupplyChainHorizontal out/terroir-16x9.mp4 --props='{\"stepsPath\":\"steps-terroir.json\",\"brandPath\":\"brand-terroir.json\"}'",
+    "render": "npm run render:origine && npm run render:terroir",
+    "test": "node --import tsx --test src/*.test.ts",
+    "check:route": "tsx scripts/check-route.ts public/steps-origine.json && tsx scripts/check-route.ts public/steps-terroir.json --svg out/route-check-terroir.svg",
     "assets:placeholders": "remotion still scripts/placeholders/index.tsx logo public/logo.png && remotion still scripts/placeholders/index.tsx farm public/farm.jpg && remotion still scripts/placeholders/index.tsx roaster public/roaster.jpg && python3 scripts/make-placeholder-music.py 60",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src scripts"
