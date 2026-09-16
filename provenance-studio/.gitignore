@@ -42,3 +42,7 @@ next-env.d.ts
 
 # env d'exemple : versionné
 !.env.example
+
+# rendus locaux
+/.renders
+/out

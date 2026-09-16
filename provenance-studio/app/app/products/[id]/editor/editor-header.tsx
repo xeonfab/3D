@@ -17,6 +17,7 @@ type EditorHeaderProps = {
   saveError: string | null;
   onChange: (patch: Partial<Pick<EditorProduct, "name" | "end_line">>) => void;
   onGenerate?: () => void;
+  generating?: boolean;
   generateDisabledReason?: string;
 };
 
@@ -26,6 +27,7 @@ export function EditorHeader({
   saveError,
   onChange,
   onGenerate,
+  generating,
   generateDisabledReason,
 }: EditorHeaderProps) {
   const status =
@@ -107,8 +109,12 @@ export function EditorHeader({
           </Tooltip>
         ) : (
           <Button type="button" size="lg" onClick={onGenerate}>
-            <Video aria-hidden="true" />
-            Générer la vidéo
+            {generating ? (
+              <Loader2 className="animate-spin" aria-hidden="true" />
+            ) : (
+              <Video aria-hidden="true" />
+            )}
+            {generating ? "Vidéo en cours…" : "Générer la vidéo"}
           </Button>
         )}
       </div>

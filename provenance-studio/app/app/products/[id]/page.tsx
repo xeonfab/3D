@@ -8,6 +8,7 @@ import { publicUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 import { ProductEditor } from "./editor/product-editor";
+import { getRendersAction } from "./render-actions";
 import type { EditorStep } from "./editor/types";
 
 type Params = Promise<{ id: string }>;
@@ -44,13 +45,23 @@ export default async function ProductPage({ params }: { params: Params }) {
     waypoints: parseWaypoints(s.waypoints),
   }));
   const limits = limitsFor(org.plan);
+  const rendersResult = await getRendersAction(product.id);
+  const initialRenders = rendersResult.ok
+    ? rendersResult.data
+    : { renders: [], publicUrl: null, estimateSeconds: 60 };
 
   return (
     <ProductEditor
       initialProduct={product}
       initialSteps={editorSteps}
       brand={{ name: org.name, color: org.brand_color, logoUrl: publicUrl("logos", org.logo_path) }}
-      plan={{ maxSteps: limits.maxSteps, isFree: org.plan === "free" }}
+      plan={{
+        maxSteps: limits.maxSteps,
+        isFree: org.plan === "free",
+        resolution: limits.resolution,
+        watermark: limits.watermark,
+      }}
+      initialRenders={initialRenders}
     />
   );
 }
