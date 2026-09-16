@@ -96,6 +96,34 @@ const addCoastline = (map: mapboxgl.Map) => {
   );
 };
 
+/**
+ * Multiplie une valeur `text-size` par un facteur sans casser les règles des
+ * expressions Mapbox (`["zoom"]` doit rester l'entrée directe d'un
+ * `interpolate` / `step` de premier niveau : on met donc à l'échelle les
+ * sorties, pas l'expression entière).
+ */
+const scaleSize = (size: unknown, factor: number): unknown => {
+  if (typeof size === "number") return size * factor;
+  if (Array.isArray(size)) {
+    const [head] = size;
+    if (head === "interpolate") {
+      // ["interpolate", interp, input, stop, out, stop, out, …]
+      return size.map((v, i) => (i >= 4 && i % 2 === 0 ? scaleSize(v, factor) : v));
+    }
+    if (head === "step") {
+      // ["step", input, out0, stop, out, stop, out, …]
+      return size.map((v, i) => (i >= 2 && i % 2 === 0 ? scaleSize(v, factor) : v));
+    }
+    if (!JSON.stringify(size).includes('["zoom"]')) return ["*", size, factor];
+    return size;
+  }
+  if (size && typeof size === "object" && Array.isArray((size as { stops?: unknown }).stops)) {
+    const legacy = size as { stops: [number, number][] };
+    return { ...legacy, stops: legacy.stops.map(([z, v]) => [z, v * factor]) };
+  }
+  return size;
+};
+
 /** Frontières et labels de pays renforcés. */
 const emphasizeCountries = (map: mapboxgl.Map) => {
   for (const id of ["admin-0-boundary", "admin-0-boundary-disputed"]) {
@@ -109,10 +137,9 @@ const emphasizeCountries = (map: mapboxgl.Map) => {
     map.setPaintProperty(id, "text-color", COUNTRY_LABELS.color);
     map.setPaintProperty(id, "text-halo-color", COUNTRY_LABELS.haloColor);
     const size = map.getLayoutProperty(id, "text-size");
-    if (typeof size === "number") {
-      map.setLayoutProperty(id, "text-size", size * COUNTRY_LABELS.sizeFactor);
-    } else if (Array.isArray(size)) {
-      map.setLayoutProperty(id, "text-size", ["*", size, COUNTRY_LABELS.sizeFactor]);
+    const scaled = scaleSize(size, COUNTRY_LABELS.sizeFactor);
+    if (scaled !== size) {
+      map.setLayoutProperty(id, "text-size", scaled as mapboxgl.DataDrivenPropertyValueSpecification<number>);
     }
   }
 };
@@ -221,15 +248,20 @@ export const MapScene = ({
     map.on("error", (e) => {
       const err = e.error as (Error & { status?: number }) | undefined;
       const status = err?.status;
+      const message = `Mapbox : ${err?.message || "erreur inconnue"}${status ? ` (HTTP ${status})` : ""}`;
+      if (status === undefined) {
+        // Erreur de style (validation, couche inconnue…) : on prévient sans
+        // interrompre le rendu, la carte reste pilotable.
+        console.warn(message);
+        return;
+      }
       const hint =
         status === 401 || status === 403
           ? " — token Mapbox refusé : vérifiez REMOTION_MAPBOX_TOKEN dans .env (et ses restrictions d'URL sur account.mapbox.com)"
           : "";
-      cancelRender(
-        new Error(
-          `Mapbox : ${err?.message || "erreur inconnue"}${status ? ` (HTTP ${status})` : ""}${hint}`,
-        ),
-      );
+      // Différé : `cancelRender` lève une exception, on ne l'envoie pas au
+      // milieu d'un appel interne de Mapbox.
+      queueMicrotask(() => cancelRender(new Error(message + hint)));
     });
 
     map.on("load", () => {
@@ -242,11 +274,21 @@ export const MapScene = ({
           "star-intensity": ATMOSPHERE.starIntensity,
         });
       }
-      applyLandSea(map, look);
-      if (look.countries) emphasizeCountries(map);
-      if (look.hillshade) addHillshade(map);
-      if (look.highlightCountries) addCountryHighlight(map, color);
-      if (look.coastline) addCoastline(map);
+      const cosmetic: [string, boolean, () => void][] = [
+        ["terre/mer", true, () => applyLandSea(map, look)],
+        ["pays", look.countries, () => emphasizeCountries(map)],
+        ["relief", look.hillshade, () => addHillshade(map)],
+        ["pays teintés", look.highlightCountries, () => addCountryHighlight(map, color)],
+        ["côtes", look.coastline, () => addCoastline(map)],
+      ];
+      for (const [name, enabled, apply] of cosmetic) {
+        if (!enabled) continue;
+        try {
+          apply();
+        } catch (err) {
+          console.warn(`Habillage « ${name} » ignoré :`, err);
+        }
+      }
 
       map.addSource(ROUTE_SOURCE, {
         type: "geojson",
