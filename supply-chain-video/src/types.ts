@@ -20,6 +20,8 @@ export type Step = {
    * trajet "sea" : c'est le JSON qui porte la route, pas le code.
    */
   waypoints?: [number, number][];
+  /** Code pays ISO 3166-1 alpha-2 (ex. "FR") : le pays se teinte à l'arrivée de l'étape. */
+  country?: string;
   final?: boolean;
 };
 
@@ -39,8 +41,27 @@ export type CameraSettings = {
   zoomWorld: number;
   /** Marge (px) autour de la route lorsque la caméra survole un tronçon. */
   flightPaddingPx: number;
-  /** Ombrage du relief (MNT Mapbox Terrain) sous les routes et labels. */
+};
+
+/** Habillage de la carte, surchargeable depuis `brand.json` → `"map"`. */
+export type MapLook = {
+  /** Projection globe (Terre ronde aux petits zooms) au lieu de Mercator. */
+  globe: boolean;
+  /** Atmosphère / halo d'horizon / étoiles (fog Mapbox). */
+  atmosphere: boolean;
+  /** Ombrage du relief (MNT Mapbox Terrain) sous l'eau, les routes et les labels. */
   hillshade: boolean;
+  /** Couleur de la mer et de la terre (hex) ; vide = couleurs du style. */
+  seaColor: string;
+  landColor: string;
+  /** Liseré lumineux le long des côtes. */
+  coastline: boolean;
+  /** Frontières et labels de pays renforcés. */
+  countries: boolean;
+  /** Teinte les pays des étapes (champ `country`) dans la couleur de marque. */
+  highlightCountries: boolean;
+  /** Bateau / camion à la tête du tracé pendant les vols. */
+  vehicle: boolean;
 };
 
 export type Timing = {
@@ -69,6 +90,8 @@ export type Brand = {
   music?: string;
   /** Gain appliqué à la musique en dB (défaut : -18). */
   musicGainDb?: number;
+  /** Habillage de la carte (voir `MapLook` et `defaults.ts`). */
+  map?: Partial<MapLook>;
 };
 
 export type LngLat = [number, number];

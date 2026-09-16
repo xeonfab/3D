@@ -1,6 +1,6 @@
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   cancelRender,
   continueRender,
@@ -8,17 +8,43 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { HILLSHADE, MAPBOX_STYLE } from "./defaults";
+import {
+  ATMOSPHERE,
+  COASTLINE,
+  COUNTRY_BORDERS,
+  COUNTRY_BOUNDARIES,
+  COUNTRY_HIGHLIGHT_OPACITY,
+  COUNTRY_LABELS,
+  HILLSHADE,
+  MAPBOX_STYLE,
+} from "./defaults";
 import { partialLine } from "./geo";
-import type { Camera, Leg } from "./types";
+import type { Camera, Leg, MapLook } from "./types";
 
 const ROUTE_SOURCE = "route";
 const DEM_SOURCE = "mapbox-dem";
+const COUNTRIES_SOURCE = "country-boundaries";
+const HIGHLIGHT_LAYER = "country-highlight";
 
-/**
- * Ajoute l'ombrage du relief juste sous la couche d'eau du style (le relief
- * apparaît donc sous les mers, routes et labels, mais au-dessus des fonds).
- */
+type Props = {
+  camera: Camera;
+  legs: Leg[];
+  /** Progression du tracé de chaque tronçon (0→1) à la frame courante. */
+  legProgress: number[];
+  color: string;
+  look: MapLook;
+  /** Codes ISO des pays déjà atteints à la frame courante. */
+  reachedCountries: string[];
+  /** Appelé une fois la carte prête (pour projeter les overlays). */
+  onReady: (map: mapboxgl.Map) => void;
+  /** Appelé après positionnement de la caméra pour la frame donnée. */
+  onFrameApplied: (frame: number) => void;
+};
+
+/** Première couche de type symbol (labels) : on insère nos couches dessous. */
+const firstSymbolLayer = (map: mapboxgl.Map) =>
+  map.getStyle()?.layers?.find((l) => l.type === "symbol")?.id;
+
 const addHillshade = (map: mapboxgl.Map) => {
   map.addSource(DEM_SOURCE, {
     type: "raster-dem",
@@ -26,10 +52,6 @@ const addHillshade = (map: mapboxgl.Map) => {
     tileSize: HILLSHADE.tileSize,
     maxzoom: HILLSHADE.maxzoom,
   });
-  const layers = map.getStyle()?.layers ?? [];
-  const before =
-    layers.find((l) => l.id === "water")?.id ??
-    layers.find((l) => l.type === "symbol" || l.type === "line")?.id;
   map.addLayer(
     {
       id: "hillshade",
@@ -43,17 +65,91 @@ const addHillshade = (map: mapboxgl.Map) => {
         "hillshade-illumination-anchor": "map",
       },
     },
-    before,
+    map.getLayer("water") ? "water" : firstSymbolLayer(map),
   );
 };
 
-type Props = {
-  camera: Camera;
-  legs: Leg[];
-  /** Progression du tracé de chaque tronçon (0→1) à la frame courante. */
-  legProgress: number[];
-  color: string;
-  hillshade: boolean;
+/** Contraste terre / mer : recolore les couches de fond du style. */
+const applyLandSea = (map: mapboxgl.Map, look: MapLook) => {
+  if (look.seaColor && map.getLayer("water"))
+    map.setPaintProperty("water", "fill-color", look.seaColor);
+  if (look.landColor && map.getLayer("land"))
+    map.setPaintProperty("land", "background-color", look.landColor);
+};
+
+/** Liseré le long des côtes : contour des polygones d'eau du style. */
+const addCoastline = (map: mapboxgl.Map) => {
+  if (!map.getSource("composite")) return;
+  map.addLayer(
+    {
+      id: "coastline",
+      type: "line",
+      source: "composite",
+      "source-layer": "water",
+      paint: {
+        "line-color": COASTLINE.color,
+        "line-width": COASTLINE.width,
+        "line-opacity": COASTLINE.opacity,
+      },
+    },
+    firstSymbolLayer(map),
+  );
+};
+
+/** Frontières et labels de pays renforcés. */
+const emphasizeCountries = (map: mapboxgl.Map) => {
+  for (const id of ["admin-0-boundary", "admin-0-boundary-disputed"]) {
+    if (!map.getLayer(id)) continue;
+    map.setPaintProperty(id, "line-color", COUNTRY_BORDERS.color);
+    map.setPaintProperty(id, "line-width", COUNTRY_BORDERS.width);
+    map.setPaintProperty(id, "line-opacity", COUNTRY_BORDERS.opacity);
+  }
+  for (const id of ["country-label", "continent-label"]) {
+    if (!map.getLayer(id)) continue;
+    map.setPaintProperty(id, "text-color", COUNTRY_LABELS.color);
+    map.setPaintProperty(id, "text-halo-color", COUNTRY_LABELS.haloColor);
+    const size = map.getLayoutProperty(id, "text-size");
+    if (typeof size === "number") {
+      map.setLayoutProperty(id, "text-size", size * COUNTRY_LABELS.sizeFactor);
+    } else if (Array.isArray(size)) {
+      map.setLayoutProperty(id, "text-size", ["*", size, COUNTRY_LABELS.sizeFactor]);
+    }
+  }
+};
+
+/** Couche de teinte des pays atteints (filtre mis à jour à chaque frame). */
+const addCountryHighlight = (map: mapboxgl.Map, color: string) => {
+  map.addSource(COUNTRIES_SOURCE, { type: "vector", url: COUNTRY_BOUNDARIES.url });
+  map.addLayer(
+    {
+      id: HIGHLIGHT_LAYER,
+      type: "fill",
+      source: COUNTRIES_SOURCE,
+      "source-layer": COUNTRY_BOUNDARIES.sourceLayer,
+      filter: ["==", ["get", "iso_3166_1"], ""],
+      paint: {
+        "fill-color": color,
+        "fill-opacity": COUNTRY_HIGHLIGHT_OPACITY,
+        // Aucune transition : l'état ne dépend que de la frame.
+        "fill-opacity-transition": { duration: 0, delay: 0 },
+      },
+    },
+    map.getLayer("hillshade") ? "hillshade" : map.getLayer("water") ? "water" : firstSymbolLayer(map),
+  );
+};
+
+const setReachedCountries = (map: mapboxgl.Map, codes: string[]) => {
+  if (!map.getLayer(HIGHLIGHT_LAYER)) return;
+  map.setFilter(HIGHLIGHT_LAYER, [
+    "all",
+    ["in", ["get", "iso_3166_1"], ["literal", codes]],
+    // Une seule géométrie par pays : celle de la vue du monde choisie.
+    [
+      "any",
+      ["==", "all", ["get", "worldview"]],
+      ["in", COUNTRY_BOUNDARIES.worldview, ["get", "worldview"]],
+    ],
+  ]);
 };
 
 /**
@@ -65,7 +161,16 @@ type Props = {
  * jusqu'à l'événement `idle` de Mapbox (tuiles chargées et dessinées).
  * La sortie est donc identique à chaque `remotion render`.
  */
-export const MapScene = ({ camera, legs, legProgress, color, hillshade }: Props) => {
+export const MapScene = ({
+  camera,
+  legs,
+  legProgress,
+  color,
+  look,
+  reachedCountries,
+  onReady,
+  onFrameApplied,
+}: Props) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -100,6 +205,7 @@ export const MapScene = ({ camera, legs, legProgress, color, hillshade }: Props)
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: MAPBOX_STYLE,
+      projection: look.globe ? "globe" : "mercator",
       center: camera.center,
       zoom: camera.zoom,
       bearing: 0,
@@ -127,7 +233,21 @@ export const MapScene = ({ camera, legs, legProgress, color, hillshade }: Props)
     });
 
     map.on("load", () => {
-      if (hillshade) addHillshade(map);
+      if (look.atmosphere) {
+        map.setFog({
+          color: ATMOSPHERE.color,
+          "high-color": ATMOSPHERE.highColor,
+          "horizon-blend": ATMOSPHERE.horizonBlend,
+          "space-color": ATMOSPHERE.spaceColor,
+          "star-intensity": ATMOSPHERE.starIntensity,
+        });
+      }
+      applyLandSea(map, look);
+      if (look.countries) emphasizeCountries(map);
+      if (look.hillshade) addHillshade(map);
+      if (look.highlightCountries) addCountryHighlight(map, color);
+      if (look.coastline) addCoastline(map);
+
       map.addSource(ROUTE_SOURCE, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -160,6 +280,7 @@ export const MapScene = ({ camera, legs, legProgress, color, hillshade }: Props)
         paint: { "line-color": color, "line-width": 4, "line-dasharray": [0.2, 2.2] },
       });
       mapRef.current = map;
+      onReady(map);
       setReady(true);
       continueRender(handle);
     });
@@ -172,7 +293,8 @@ export const MapScene = ({ camera, legs, legProgress, color, hillshade }: Props)
   }, []);
 
   // Mise à jour à chaque frame : caméra + tracé progressif, puis attente de `idle`.
-  useEffect(() => {
+  // useLayoutEffect : les overlays sont re-projetés avant l'affichage de la frame.
+  useLayoutEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
 
@@ -187,6 +309,9 @@ export const MapScene = ({ camera, legs, legProgress, color, hillshade }: Props)
       type: "FeatureCollection",
       features,
     });
+    setReachedCountries(map, reachedCountries);
+
+    onFrameApplied(frame);
 
     map.once("idle", () => continueRender(handle));
     // Force un cycle de rendu même si rien n'a changé (frames de fin fixes),

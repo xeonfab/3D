@@ -6,6 +6,7 @@
       "caption": "Récolte à la main, nov.–janv.",
       "lat": 5.75,
       "lng": 38.9,
+      "country": "ET",
       "photo": "farm.jpg",
       "mode": "land"
     },
@@ -14,6 +15,7 @@
       "caption": "Séchage 18 jours sur lits africains",
       "lat": 5.9,
       "lng": 38.8,
+      "country": "ET",
       "mode": "land"
     },
     {
@@ -21,6 +23,7 @@
       "caption": "Départ en conteneur",
       "lat": 11.6,
       "lng": 43.15,
+      "country": "DJ",
       "mode": "sea",
       "waypoints": [
         [
@@ -154,6 +157,7 @@
       "caption": "Arrivée après 6 semaines de traversée",
       "lat": 49.49,
       "lng": 0.11,
+      "country": "FR",
       "mode": "land"
     },
     {
@@ -161,6 +165,7 @@
       "caption": "Acheminé par la route",
       "lat": 44.84,
       "lng": -0.58,
+      "country": "FR",
       "mode": "land"
     },
     {
@@ -168,6 +173,7 @@
       "caption": "Torréfié en petit lot chaque semaine",
       "lat": 48.11,
       "lng": -1.68,
+      "country": "FR",
       "photo": "roaster.jpg",
       "mode": "land",
       "final": true

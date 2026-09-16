@@ -28,5 +28,6 @@ export const useLayout = () => {
     photoSize,
     photoBottom: margin,
     logoSize: 220 * u,
+    vehicleSize: 64 * u,
   };
 };

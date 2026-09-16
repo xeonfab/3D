@@ -1,4 +1,4 @@
-import type { CameraSettings, Timing } from "./types";
+import type { CameraSettings, MapLook, Timing } from "./types";
 
 /**
  * Valeurs de rythme par défaut, toutes surchargeables depuis
@@ -18,9 +18,45 @@ export const DEFAULT_TIMING: Timing = {
 export const DEFAULT_CAMERA: CameraSettings = {
   zoomCity: 11,
   zoomWorld: 5,
-  flightPaddingPx: 120,
-  hillshade: true,
+  flightPaddingPx: 140,
 };
+
+/** Habillage par défaut, surchargeable via `brand.json` → `"map"`. */
+export const DEFAULT_LOOK: MapLook = {
+  globe: true,
+  atmosphere: true,
+  hillshade: true,
+  seaColor: "#0a1220",
+  landColor: "#1f2329",
+  coastline: true,
+  countries: true,
+  highlightCountries: true,
+  vehicle: true,
+};
+
+/** Atmosphère (fog Mapbox) : nuit profonde, halo bleu à l'horizon, étoiles. */
+export const ATMOSPHERE = {
+  color: "rgb(14, 18, 30)",
+  highColor: "rgb(28, 40, 80)",
+  horizonBlend: 0.06,
+  spaceColor: "rgb(3, 4, 9)",
+  starIntensity: 0.35,
+};
+
+/** Liseré de côte, frontières et labels de pays. */
+export const COASTLINE = { color: "#6f8296", width: 1.1, opacity: 0.55 };
+export const COUNTRY_BORDERS = { color: "#8a93a3", width: 1.2, opacity: 0.6 };
+export const COUNTRY_LABELS = { color: "#c9d1dc", haloColor: "#0a0d14", sizeFactor: 1.25 };
+/** Opacité de la teinte des pays des étapes (couleur de marque). */
+export const COUNTRY_HIGHLIGHT_OPACITY = 0.14;
+/** Tileset Mapbox des frontières (données officielles, worldview « US »). */
+export const COUNTRY_BOUNDARIES = {
+  url: "mapbox://mapbox.country-boundaries-v1",
+  sourceLayer: "country_boundaries",
+  worldview: "US",
+};
+/** Au-delà de cette distance angulaire du centre, un point est derrière le globe. */
+export const GLOBE_HIDE_KM = 8500;
 
 /**
  * Relief : MNT Mapbox Terrain (vraies altitudes) rendu en ombrage

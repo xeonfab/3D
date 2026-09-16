@@ -69,6 +69,7 @@ Si Remotion ne peut pas télécharger son Chrome headless, indiquez un binaire
 | `photo` | Optionnel. Fichier image dans `public/`, affiché en bas à droite, coins arrondis. |
 | `mode` | `"land"` ou `"sea"` : mode du **trajet qui part de cette étape** vers la suivante. Un trajet `sea` est tracé en pointillés. |
 | `waypoints` | Points de passage `[lat, lng]` du trajet qui part de cette étape. **Obligatoire pour `sea`** : c'est le JSON qui porte la route (détroits, canaux, caps), le code ne fait que relier les points par des arcs great-circle. |
+| `country` | Optionnel. Code ISO 3166-1 alpha-2 (`"FR"`, `"ET"`…) : le pays se teinte dans la couleur de marque quand l'étape est atteinte. |
 | `final` | Marque l'étape d'arrivée : zoom serré sur la ville, puis écran de fin. |
 
 La durée est calculée automatiquement : arrêt sur chaque étape + vol entre
@@ -80,7 +81,7 @@ règlent sans toucher au code, via des blocs optionnels dans `steps.json` :
 {
   "timing": { "holdSeconds": 4, "travelMinSeconds": 2.5, "travelMaxSeconds": 5,
               "travelMaxDistanceKm": 5000, "introSeconds": 1, "endingSeconds": 3, "fps": 30 },
-  "camera": { "zoomCity": 11, "zoomWorld": 5, "flightPaddingPx": 120, "hillshade": true }
+  "camera": { "zoomCity": 11, "zoomWorld": 5, "flightPaddingPx": 140 }
 }
 ```
 
@@ -88,10 +89,7 @@ règlent sans toucher au code, via des blocs optionnels dans `steps.json` :
 dérivé de la distance à l'étape voisine la plus proche : serré pour deux
 sites dans la même vallée, large pour un port qui précède une traversée. En
 vol, la caméra suit la trajectoire de `flyTo` (van Wijk & Nuij) et dézoome
-juste assez pour garder le tronçon entier à l'écran. `hillshade` ajoute
-l'ombrage du relief (MNT Mapbox Terrain, vraies altitudes) sous l'eau, les
-routes et les labels : les zones rurales restent lisibles dans le style
-sombre. Réglages fins (exagération, couleurs) dans `src/defaults.ts`.
+juste assez pour garder le tronçon entier à l'écran.
 
 ### Placer les waypoints maritimes
 
@@ -138,6 +136,29 @@ script échoue et indique la position du problème. Il écrit aussi
 - `logo` : fichier dans `public/`, affiché sur l'écran de fin (3 s, carte fixe).
 - `endLine` : ligne de fin sous le logo.
 - `music` / `musicGainDb` : musique de fond et gain (défaut `music.mp3` à −18 dB).
+- `map` : habillage de la carte, optionnel. Toutes les clés ont une valeur par
+  défaut (`src/defaults.ts`) ; on ne précise que ce qu'on change :
+
+```json
+"map": {
+  "globe": true,              "atmosphere": true,
+  "hillshade": true,          "coastline": true,
+  "countries": true,          "highlightCountries": true,
+  "vehicle": true,
+  "seaColor": "#0a1220",      "landColor": "#1f2329"
+}
+```
+
+  - `globe` + `atmosphere` : Terre ronde, halo d'horizon et étoiles quand la
+    caméra dézoome (vols intercontinentaux) ; Mercator classique en zoom serré.
+  - `hillshade` : ombrage du relief (MNT Mapbox Terrain, vraies altitudes).
+  - `seaColor` / `landColor` : contraste terre / mer ; `coastline` ajoute un
+    liseré le long des côtes ; `countries` renforce frontières et noms de pays.
+  - `highlightCountries` : teinte les pays des étapes (champ `country`).
+  - `vehicle` : bateau sur un tronçon `sea`, camion sur un tronçon `land`, à
+    la tête du tracé, orienté dans le sens de la marche.
+  Couleurs fines (atmosphère, côtes, frontières, opacité de la teinte) dans
+  `src/defaults.ts`.
 
 ## Fichiers médias
 

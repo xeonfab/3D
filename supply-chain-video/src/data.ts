@@ -1,6 +1,6 @@
 import { staticFile } from "remotion";
-import { DEFAULT_CAMERA, DEFAULT_TIMING } from "./defaults";
-import type { Brand, CameraSettings, Step, StepsFile, Timing } from "./types";
+import { DEFAULT_CAMERA, DEFAULT_LOOK, DEFAULT_TIMING } from "./defaults";
+import type { Brand, CameraSettings, MapLook, Step, StepsFile, Timing } from "./types";
 
 /** Charge et valide `public/steps.json`. */
 export const loadSteps = async (): Promise<StepsFile> => {
@@ -47,6 +47,8 @@ export const validateSteps = (raw: unknown): StepsFile => {
         assertCoord(wp?.[0], wp?.[1], `${where}.waypoints[${j}]`),
       );
     }
+    if (step.country !== undefined && !/^[A-Z]{2}$/.test(step.country))
+      throw new Error(`${where} : country doit être un code ISO alpha-2 en majuscules (ex. "FR")`);
     const isLast = i === file.steps.length - 1;
     if (step.mode === "sea" && !isLast && !(step.waypoints && step.waypoints.length > 0)) {
       throw new Error(
@@ -64,9 +66,7 @@ export const validateSteps = (raw: unknown): StepsFile => {
   if (file.camera !== undefined) {
     for (const [k, v] of Object.entries(file.camera)) {
       if (!(k in DEFAULT_CAMERA)) throw new Error(`steps.json : camera.${k} inconnu`);
-      const expectBool = typeof DEFAULT_CAMERA[k as keyof CameraSettings] === "boolean";
-      if (expectBool ? typeof v !== "boolean" : !isNum(v) || v < 0)
-        throw new Error(`steps.json : camera.${k} invalide`);
+      if (!isNum(v) || v < 0) throw new Error(`steps.json : camera.${k} invalide`);
     }
   }
   return file;
@@ -85,6 +85,13 @@ export const validateBrand = (raw: unknown): Brand => {
   if (typeof brand.endLine !== "string") throw new Error("brand.json : `endLine` manquant");
   if (brand.musicGainDb !== undefined && !isNum(brand.musicGainDb))
     throw new Error("brand.json : musicGainDb doit être un nombre (dB)");
+  if (brand.map !== undefined) {
+    for (const [k, v] of Object.entries(brand.map)) {
+      if (!(k in DEFAULT_LOOK)) throw new Error(`brand.json : map.${k} inconnu`);
+      if (typeof v !== typeof DEFAULT_LOOK[k as keyof MapLook])
+        throw new Error(`brand.json : map.${k} invalide`);
+    }
+  }
   return brand;
 };
 
@@ -96,6 +103,11 @@ export const resolveTiming = (file: StepsFile): Timing => ({
 export const resolveCamera = (file: StepsFile): CameraSettings => ({
   ...DEFAULT_CAMERA,
   ...(file.camera ?? {}),
+});
+
+export const resolveLook = (brand: Brand): MapLook => ({
+  ...DEFAULT_LOOK,
+  ...(brand.map ?? {}),
 });
 
 /** Convertit un gain en dB en facteur de volume linéaire (0 dB → 1). */
