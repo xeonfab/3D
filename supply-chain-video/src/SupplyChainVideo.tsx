@@ -39,7 +39,13 @@ export const SupplyChainVideo = ({ stepsFile, brand }: VideoProps) => {
 
   return (
     <AbsoluteFill style={{ background: "#0b0b0e" }}>
-      <MapScene camera={camera} legs={legs} legProgress={legProgress} color={color} />
+      <MapScene
+        camera={camera}
+        legs={legs}
+        legProgress={legProgress}
+        color={color}
+        hillshade={camSettings.hillshade}
+      />
 
       {/* Points des étapes déjà atteintes (dont l'étape courante, pulsante). */}
       {steps.map((step, i) => {

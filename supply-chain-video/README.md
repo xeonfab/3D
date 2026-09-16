@@ -80,7 +80,7 @@ règlent sans toucher au code, via des blocs optionnels dans `steps.json` :
 {
   "timing": { "holdSeconds": 4, "travelMinSeconds": 2.5, "travelMaxSeconds": 5,
               "travelMaxDistanceKm": 5000, "introSeconds": 1, "endingSeconds": 3, "fps": 30 },
-  "camera": { "zoomCity": 11, "zoomWorld": 5, "flightPaddingPx": 120 }
+  "camera": { "zoomCity": 11, "zoomWorld": 5, "flightPaddingPx": 120, "hillshade": true }
 }
 ```
 
@@ -88,7 +88,10 @@ règlent sans toucher au code, via des blocs optionnels dans `steps.json` :
 dérivé de la distance à l'étape voisine la plus proche : serré pour deux
 sites dans la même vallée, large pour un port qui précède une traversée. En
 vol, la caméra suit la trajectoire de `flyTo` (van Wijk & Nuij) et dézoome
-juste assez pour garder le tronçon entier à l'écran.
+juste assez pour garder le tronçon entier à l'écran. `hillshade` ajoute
+l'ombrage du relief (MNT Mapbox Terrain, vraies altitudes) sous l'eau, les
+routes et les labels : les zones rurales restent lisibles dans le style
+sombre. Réglages fins (exagération, couleurs) dans `src/defaults.ts`.
 
 ### Placer les waypoints maritimes
 

@@ -64,7 +64,9 @@ export const validateSteps = (raw: unknown): StepsFile => {
   if (file.camera !== undefined) {
     for (const [k, v] of Object.entries(file.camera)) {
       if (!(k in DEFAULT_CAMERA)) throw new Error(`steps.json : camera.${k} inconnu`);
-      if (!isNum(v) || v < 0) throw new Error(`steps.json : camera.${k} invalide`);
+      const expectBool = typeof DEFAULT_CAMERA[k as keyof CameraSettings] === "boolean";
+      if (expectBool ? typeof v !== "boolean" : !isNum(v) || v < 0)
+        throw new Error(`steps.json : camera.${k} invalide`);
     }
   }
   return file;

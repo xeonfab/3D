@@ -39,6 +39,8 @@ export type CameraSettings = {
   zoomWorld: number;
   /** Marge (px) autour de la route lorsque la caméra survole un tronçon. */
   flightPaddingPx: number;
+  /** Ombrage du relief (MNT Mapbox Terrain) sous les routes et labels. */
+  hillshade: boolean;
 };
 
 export type Timing = {

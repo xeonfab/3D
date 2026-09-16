@@ -19,6 +19,21 @@ export const DEFAULT_CAMERA: CameraSettings = {
   zoomCity: 11,
   zoomWorld: 5,
   flightPaddingPx: 120,
+  hillshade: true,
+};
+
+/**
+ * Relief : MNT Mapbox Terrain (vraies altitudes) rendu en ombrage
+ * `hillshade`, réglé pour rester discret sur le style sombre.
+ */
+export const HILLSHADE = {
+  source: "mapbox://mapbox.mapbox-terrain-dem-v1",
+  tileSize: 512,
+  maxzoom: 14,
+  exaggeration: 0.55,
+  shadowColor: "#000000",
+  highlightColor: "#4a5059",
+  accentColor: "#22262d",
 };
 
 /** Fichier de musique et gain par défaut si `brand.json` ne les précise pas. */

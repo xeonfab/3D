@@ -8,11 +8,44 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { MAPBOX_STYLE } from "./defaults";
+import { HILLSHADE, MAPBOX_STYLE } from "./defaults";
 import { partialLine } from "./geo";
 import type { Camera, Leg } from "./types";
 
 const ROUTE_SOURCE = "route";
+const DEM_SOURCE = "mapbox-dem";
+
+/**
+ * Ajoute l'ombrage du relief juste sous la couche d'eau du style (le relief
+ * apparaît donc sous les mers, routes et labels, mais au-dessus des fonds).
+ */
+const addHillshade = (map: mapboxgl.Map) => {
+  map.addSource(DEM_SOURCE, {
+    type: "raster-dem",
+    url: HILLSHADE.source,
+    tileSize: HILLSHADE.tileSize,
+    maxzoom: HILLSHADE.maxzoom,
+  });
+  const layers = map.getStyle()?.layers ?? [];
+  const before =
+    layers.find((l) => l.id === "water")?.id ??
+    layers.find((l) => l.type === "symbol" || l.type === "line")?.id;
+  map.addLayer(
+    {
+      id: "hillshade",
+      type: "hillshade",
+      source: DEM_SOURCE,
+      paint: {
+        "hillshade-exaggeration": HILLSHADE.exaggeration,
+        "hillshade-shadow-color": HILLSHADE.shadowColor,
+        "hillshade-highlight-color": HILLSHADE.highlightColor,
+        "hillshade-accent-color": HILLSHADE.accentColor,
+        "hillshade-illumination-anchor": "map",
+      },
+    },
+    before,
+  );
+};
 
 type Props = {
   camera: Camera;
@@ -20,6 +53,7 @@ type Props = {
   /** Progression du tracé de chaque tronçon (0→1) à la frame courante. */
   legProgress: number[];
   color: string;
+  hillshade: boolean;
 };
 
 /**
@@ -31,7 +65,7 @@ type Props = {
  * jusqu'à l'événement `idle` de Mapbox (tuiles chargées et dessinées).
  * La sortie est donc identique à chaque `remotion render`.
  */
-export const MapScene = ({ camera, legs, legProgress, color }: Props) => {
+export const MapScene = ({ camera, legs, legProgress, color, hillshade }: Props) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,6 +127,7 @@ export const MapScene = ({ camera, legs, legProgress, color }: Props) => {
     });
 
     map.on("load", () => {
+      if (hillshade) addHillshade(map);
       map.addSource(ROUTE_SOURCE, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
