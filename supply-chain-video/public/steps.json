@@ -1,0 +1,161 @@
+{
+  "product": "Éthiopie Guji nature",
+  "steps": [
+    {
+      "title": "Ferme Kayon Mountain",
+      "caption": "Récolte à la main, nov.–janv.",
+      "lat": 5.75,
+      "lng": 38.9,
+      "photo": "farm.jpg",
+      "mode": "land"
+    },
+    {
+      "title": "Station de lavage, Guji",
+      "caption": "Séchage 18 jours sur lits africains",
+      "lat": 5.9,
+      "lng": 38.8,
+      "mode": "land"
+    },
+    {
+      "title": "Port de Djibouti",
+      "caption": "Départ en conteneur",
+      "lat": 11.6,
+      "lng": 43.15,
+      "mode": "sea",
+      "waypoints": [
+        [
+          11.75,
+          43.45
+        ],
+        [
+          12.2,
+          43.45
+        ],
+        [
+          12.55,
+          43.37
+        ],
+        [
+          15.0,
+          41.5
+        ],
+        [
+          20.0,
+          38.5
+        ],
+        [
+          24.0,
+          36.3
+        ],
+        [
+          27.5,
+          34.0
+        ],
+        [
+          28.3,
+          33.35
+        ],
+        [
+          29.0,
+          32.85
+        ],
+        [
+          29.6,
+          32.55
+        ],
+        [
+          29.95,
+          32.55
+        ],
+        [
+          30.6,
+          32.3
+        ],
+        [
+          31.27,
+          32.32
+        ],
+        [
+          31.7,
+          32.2
+        ],
+        [
+          34.0,
+          24.0
+        ],
+        [
+          35.5,
+          14.0
+        ],
+        [
+          37.4,
+          11.2
+        ],
+        [
+          37.5,
+          8.0
+        ],
+        [
+          37.3,
+          3.0
+        ],
+        [
+          36.5,
+          -2.5
+        ],
+        [
+          36.2,
+          -4.5
+        ],
+        [
+          35.95,
+          -5.6
+        ],
+        [
+          36.0,
+          -6.5
+        ],
+        [
+          36.9,
+          -9.3
+        ],
+        [
+          38.8,
+          -9.9
+        ],
+        [
+          43.2,
+          -9.7
+        ],
+        [
+          45.65,
+          -1.35
+        ],
+        [
+          45.4,
+          -0.9
+        ],
+        [
+          45.1,
+          -0.7
+        ]
+      ]
+    },
+    {
+      "title": "Le Havre → Bordeaux",
+      "caption": "6 semaines de traversée",
+      "lat": 44.84,
+      "lng": -0.58,
+      "mode": "land"
+    },
+    {
+      "title": "Atelier, Rennes",
+      "caption": "Torréfié en petit lot chaque semaine",
+      "lat": 48.11,
+      "lng": -1.68,
+      "photo": "roaster.jpg",
+      "mode": "land",
+      "final": true
+    }
+  ]
+}
