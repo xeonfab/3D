@@ -55,3 +55,56 @@ simple qui respecte les règles non négociables.
     un Postgres temporaire avec des stubs `auth`/`storage`, exécuté en CI). Les
     triggers de limite de plan laissent la RLS refuser d'abord un non-membre,
     pour ne rien révéler sur l'organisation visée.
+
+## Phase 2 — Éditeur
+
+20. **Route maritime : réseau `searoute-js` + contrôle des terres.** Le réseau
+    maritime d'Eurostat (embarqué dans `searoute-js`) est grossier : aucun
+    nœud près de Djibouti, des nœuds du canal de Suez à terre, des segments
+    qui coupent des îlots. `lib/searoute.server.ts` prend donc son squelette
+    (Dijkstra via `geojson-path-finder`, avec plusieurs sommets candidats par
+    extrémité au lieu du seul plus proche, sinon certains ports comme Dunkerque
+    n'ont aucune route), écarte les nœuds à terre, puis contrôle chaque segment
+    contre les terres émergées (Natural Earth 1:50M) et remplace ceux qui en
+    touchent une par un chemin en mer calculé localement (A* sur grille +
+    lissage par ligne de visée, `lib/geo/land.server.ts`). Coût : 1 à 3 s par
+    route, côté serveur uniquement.
+21. **Fixture des continents.** `test/fixtures/continents.geojson` et
+    `lib/geo/data/land.geojson` sont le même fichier, produit par
+    `scripts/build-continents-fixture.ts` à partir de `world-atlas` (1:50M) :
+    canaux de Suez et de Panama creusés (voies navigables absentes à cette
+    échelle), polygones coupés à l'antiméridien remis en deux morceaux (sinon
+    ils forment une bande autour du globe), slivers dégénérés supprimés. Le
+    test vérifie le tracé exactement tel qu'il est dessiné (`seaSegmentCoords`).
+22. **Limites connues du routage maritime.** Un port situé « à terre » à
+    l'échelle 1:50M (port fluvial : Rotterdam, Santos, Hô Chi Minh-Ville) donne
+    un premier segment qui coupe le trait de côte simplifié sur quelques km ;
+    les routes qui traversent l'antiméridien ne sont pas gérées. Dans les deux
+    cas l'éditeur signale une route incomplète et l'utilisateur corrige les
+    points sur la carte.
+23. **Waypoints : déplacer uniquement.** Le brief demande de « corriger en
+    déplaçant des points ». Les points de passage se déplacent à la souris ;
+    « Recalculer » restaure la route automatique. Un changement de lieu d'une
+    des deux extrémités recalcule la route (les corrections manuelles sont
+    alors perdues, ce qui est attendu).
+24. **Durée par étape non exposée.** `duration_seconds` reste à 6 s par
+    défaut : le brief ne liste pas ce champ dans l'éditeur, et un seul rythme
+    garde le template cohérent.
+25. **Statut du produit calculé côté serveur.** `ready` dès que le produit a
+    au moins deux étapes toutes localisées, `draft` sinon ; recalculé après
+    chaque ajout, suppression ou changement de lieu.
+26. **Lecture de l'aperçu raccourcie.** Dans le navigateur, chaque arrêt dure
+    1,6 s (au lieu des 6 s de la vidéo) pour que la lecture reste rapide ;
+    les vols et les altitudes suivent la même logique que la vidéo
+    (`stopZoom`, `zoomForDistance`).
+27. **Photos préparées côté client.** Recadrage 4:5 centré, largeur 1080 px
+    max, JPEG compressé par paliers jusqu'à passer sous 500 Ko, puis envoi via
+    Server Action (limite serveur à 600 Ko). Le serveur revérifie type et
+    taille.
+28. **Geocoding v6 depuis le navigateur.** Appel direct à l'API Mapbox avec le
+    token public (restreint aux URL du site), `language=fr`, 5 résultats,
+    combobox ARIA au clavier. `place_name` enregistre l'adresse complète
+    renvoyée par Mapbox.
+29. **Bouton « Générer la vidéo » présent mais inactif** jusqu'à la phase 3,
+    avec une infobulle qui l'explique (ou qui rappelle qu'il faut deux étapes
+    localisées).

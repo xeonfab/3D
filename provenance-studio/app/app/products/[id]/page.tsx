@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { requireMembership } from "@/lib/auth";
+import { limitsFor } from "@/lib/plans";
+import { parseWaypoints } from "@/lib/routes";
+import { publicUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+
+import { ProductEditor } from "./editor/product-editor";
+import type { EditorStep } from "./editor/types";
 
 type Params = Promise<{ id: string }>;
 
@@ -15,28 +19,38 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return { title: data?.name ?? "Produit" };
 }
 
-/** Phase 2 : l'éditeur complet. Pour l'instant, page d'attente. */
 export default async function ProductPage({ params }: { params: Params }) {
   const { id } = await params;
+  const { membership } = await requireMembership();
+  const org = membership.organization;
   const supabase = await createClient();
-  const { data: product } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+
+  const { data: product } = await supabase
+    .from("products")
+    .select("id, name, end_line, status")
+    .eq("id", id)
+    .eq("organization_id", org.id)
+    .maybeSingle();
   if (!product) notFound();
 
+  const { data: steps } = await supabase
+    .from("steps")
+    .select("*")
+    .eq("product_id", product.id)
+    .order("position", { ascending: true });
+
+  const editorSteps: EditorStep[] = (steps ?? []).map((s) => ({
+    ...s,
+    waypoints: parseWaypoints(s.waypoints),
+  }));
+  const limits = limitsFor(org.plan);
+
   return (
-    <div className="flex flex-col gap-6">
-      <Button asChild variant="ghost" size="sm" className="w-fit">
-        <Link href="/app">
-          <ArrowLeft aria-hidden="true" />
-          Tous les produits
-        </Link>
-      </Button>
-      <div>
-        <h1 className="font-serif text-3xl">{product.name}</h1>
-        <p className="mt-2 text-muted-foreground">
-          L&apos;éditeur d&apos;étapes arrive dans la prochaine étape du chantier. Votre produit est
-          bien créé.
-        </p>
-      </div>
-    </div>
+    <ProductEditor
+      initialProduct={product}
+      initialSteps={editorSteps}
+      brand={{ name: org.name, color: org.brand_color, logoUrl: publicUrl("logos", org.logo_path) }}
+      plan={{ maxSteps: limits.maxSteps, isFree: org.plan === "free" }}
+    />
   );
 }

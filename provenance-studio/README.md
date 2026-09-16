@@ -37,6 +37,8 @@ app/                 routes Next.js (App Router)
   app/               espace connecté (tableau de bord, éditeur, paramètres…)
 components/ui/       composants shadcn/ui
 lib/                 supabase clients, auth, plans, utilitaires
+lib/routes.ts        tracés (great-circle, mer via waypoints) — partagé avec la vidéo
+lib/searoute.server.ts, lib/geo/  route maritime : réseau searoute + contrôle des terres
 supabase/migrations/ schéma SQL, RLS, buckets Storage
 scripts/seed.ts      jeu de données de développement
 test/                tests unitaires et d'intégration (Vitest)
@@ -140,6 +142,10 @@ npm run test         # Vitest (unitaires + RLS si un projet Supabase est configu
 npm run test:sql     # migrations + scénarios RLS sur un Postgres local temporaire
 npm run build        # build de production
 ```
+
+Le test `test/routes.test.ts` vérifie que la route Djibouti → Le Havre passe
+par Suez et Gibraltar sans toucher une terre (`test/fixtures/continents.geojson`,
+régénérable avec `npx tsx scripts/build-continents-fixture.ts`).
 
 Le test `test/rls.test.ts` prouve qu'un utilisateur de l'organisation A ne
 peut ni lire ni écrire les données de l'organisation B. Il s'exécute dès que
