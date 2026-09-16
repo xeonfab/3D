@@ -1,5 +1,28 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {/* config options here */};
+const supabaseHost = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname;
+  } catch {
+    return undefined;
+  }
+})();
+
+const nextConfig: NextConfig = {
+  // Le dépôt contient d'autres lockfiles (SuperSplat, prototype Remotion).
+  outputFileTracingRoot: path.join(__dirname),
+  experimental: {
+    serverActions: {
+      // Upload de logos (2 Mo) et de photos (< 500 Ko après compression).
+      bodySizeLimit: "4mb",
+    },
+  },
+  images: {
+    remotePatterns: supabaseHost
+      ? [{ protocol: "https", hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }]
+      : [],
+  },
+};
 
 export default nextConfig;
