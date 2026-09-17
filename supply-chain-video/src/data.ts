@@ -1,5 +1,5 @@
 import { staticFile } from "remotion";
-import { DEFAULT_CAMERA, DEFAULT_LOOK, DEFAULT_TIMING, NIGHT_LOOK } from "./defaults";
+import { DEFAULT_CAMERA, DEFAULT_LOOK, DEFAULT_TIMING, NIGHT_LOOK, SATELLITE_LOOK } from "./defaults";
 import type { Brand, CameraSettings, MapLook, Step, StepsFile, Timing } from "./types";
 
 const fetchJson = async (file: string): Promise<unknown> => {
@@ -67,8 +67,8 @@ export const validateSteps = (raw: unknown): StepsFile => {
     const where = `steps[${i}]`;
     if (typeof step.title !== "string") throw new Error(`${where} : title manquant`);
     assertCoord(step.lat, step.lng, where);
-    if (step.mode !== undefined && step.mode !== "land" && step.mode !== "sea")
-      throw new Error(`${where} : mode doit être "land" ou "sea"`);
+    if (step.mode !== undefined && !["land", "sea", "air"].includes(step.mode))
+      throw new Error(`${where} : mode doit être "land", "sea" ou "air"`);
     if (step.personName !== undefined && step.personName !== null && typeof step.personName !== "string")
       throw new Error(`${where} : personName doit être une chaîne ou null`);
     if (step.kind === "transit" && step.personName)
@@ -122,8 +122,8 @@ export const validateBrand = (raw: unknown): Brand => {
       if (typeof v !== typeof DEFAULT_LOOK[k as keyof MapLook])
         throw new Error(`brand : map.${k} invalide`);
     }
-    if (brand.map.theme !== undefined && brand.map.theme !== "day" && brand.map.theme !== "night")
-      throw new Error('brand : map.theme doit valoir "day" ou "night"');
+    if (brand.map.theme !== undefined && !["day", "night", "satellite"].includes(brand.map.theme))
+      throw new Error('brand : map.theme doit valoir "day", "night" ou "satellite"');
   }
   if (brand.locale !== undefined && typeof brand.locale !== "string")
     throw new Error("brand : locale doit être une chaîne (ex. \"fr\")");
@@ -144,7 +144,7 @@ export const resolveLook = (brand: Brand): MapLook => {
   const theme = brand.map?.theme ?? DEFAULT_LOOK.theme;
   return {
     ...DEFAULT_LOOK,
-    ...(theme === "night" ? NIGHT_LOOK : {}),
+    ...(theme === "night" ? NIGHT_LOOK : theme === "satellite" ? SATELLITE_LOOK : {}),
     ...(brand.map ?? {}),
     theme,
   };

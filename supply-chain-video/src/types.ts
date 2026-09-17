@@ -3,7 +3,7 @@
  * `public/steps-*.json` et `public/brand*.json` : rien n'est codé en dur.
  */
 
-export type TravelMode = "land" | "sea";
+export type TravelMode = "land" | "sea" | "air";
 export type Narrative = "origine" | "terroir";
 export type StepKind = "actor" | "transit";
 
@@ -21,7 +21,7 @@ export type Step = {
   lng: number;
   /** Nom de fichier dans `public/` (ex. "farm.jpg"). Ignoré pour un transit. */
   photo?: string;
-  /** Mode du trajet qui PART de cette étape vers la suivante (défaut : land). */
+  /** Mode du trajet qui PART de cette étape : land (camion), sea (bateau), air (avion). Défaut : land. */
   mode?: TravelMode;
   /**
    * Points de passage du trajet qui part de cette étape, au format
@@ -62,8 +62,22 @@ export type CameraSettings = {
 
 /** Habillage de la carte, surchargeable depuis `brand.json` → `"map"`. */
 export type MapLook = {
-  /** `day` : outdoors-v12, couleurs naturelles. `night` : dark-v11 recoloré. */
-  theme: "day" | "night";
+  /**
+   * `day` : outdoors-v12, couleurs naturelles. `night` : dark-v11 recoloré.
+   * `satellite` : imagerie satellite, vue inclinée, terrain 3D, traînée lumineuse.
+   */
+  theme: "day" | "night" | "satellite";
+  /** Inclinaison de la caméra en degrés (0 = vue du dessus). */
+  pitch: number;
+  /** Terrain 3D (MNT Mapbox) et son exagération verticale. */
+  terrain: boolean;
+  terrainExaggeration: number;
+  /** Lumières des villes (NASA Black Marble, tuiles publiques GIBS) fondues sur la carte. */
+  cityLights: boolean;
+  /** Traînée lumineuse : dégradé tête éclatante → queue estompée sur le tracé en cours. */
+  trailGlow: boolean;
+  /** Facteur de taille des véhicules (avion, bateau, camion). */
+  vehicleScale: number;
   /** URL de style Mapbox ; vide = style du thème. */
   style: string;
   /** Projection globe (Terre ronde aux petits zooms) au lieu de Mercator. */

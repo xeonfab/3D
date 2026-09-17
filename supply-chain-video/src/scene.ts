@@ -46,6 +46,8 @@ export type Viewport = { width: number; height: number };
 export type SceneLine = {
   feature: GeoJSON.Feature<GeoJSON.LineString>;
   mode: TravelMode;
+  /** Tracé en train de se dessiner (reçoit la traînée lumineuse). */
+  active: boolean;
   /** `route` : tracé du produit ; `spoke` : trait fin ferme → atelier ; `circle` : rayon. */
   style: "route" | "spoke" | "circle";
 };
@@ -324,7 +326,7 @@ export const sceneAt = (ctx: SceneContext, frame: number): SceneState => {
     // Cercle : se dessine pendant la première moitié de la vue rayon, puis reste.
     const circleProgress = easeInOutCubic(progress(radius.start, radius.start + (radius.end - radius.start) / 2, frame));
     const circlePartial = partialLine({ line: circle, lengthKm: 2 * Math.PI * radiusKm } as Leg, circleProgress);
-    if (circlePartial) lines.push({ feature: circlePartial, mode: "land", style: "circle" });
+    if (circlePartial) lines.push({ feature: circlePartial, mode: "land", active: false, style: "circle" });
     if (frame >= radius.start + fade && frame < radius.end) {
       radiusLine = {
         text: RADIUS_LINE.replace("{km}", String(radiusKm)),
@@ -349,7 +351,7 @@ export const sceneAt = (ctx: SceneContext, frame: number): SceneState => {
       if (!next || next.kind !== "actor") return;
       const p = easeInOutCubic(progress(next.start, next.flightEnd, frame));
       const partial = partialLine(spokes.get(seg.step)!, p);
-      if (partial) lines.push({ feature: partial, mode: "land", style: "spoke" });
+      if (partial) lines.push({ feature: partial, mode: "land", active: false, style: "spoke" });
     });
     if (segment.kind === "actor" && frame >= segment.flightEnd && frame < segment.end - fade) {
       card = cardFor(ctx, segment);
@@ -362,10 +364,9 @@ export const sceneAt = (ctx: SceneContext, frame: number): SceneState => {
       if (!leg) continue;
       const p = easeInOutCubic(progress(seg.start, seg.flightEnd, frame));
       const partial = partialLine(leg, p);
-      if (partial) lines.push({ feature: partial, mode: leg.mode, style: "route" });
-      if (segment === seg && frame < seg.flightEnd && p > 0 && p < 1) {
-        head = { lngLat: pointAlong(leg, p), mode: leg.mode };
-      }
+      const active = segment === seg && frame < seg.flightEnd && p > 0 && p < 1;
+      if (partial) lines.push({ feature: partial, mode: leg.mode, active, style: "route" });
+      if (active) head = { lngLat: pointAlong(leg, p), mode: leg.mode };
     }
     // Un seul arc continu à travers tous les transits, dessiné en accéléré.
     for (const seg of timeline.segments) {
@@ -375,10 +376,9 @@ export const sceneAt = (ctx: SceneContext, frame: number): SceneState => {
       const per = chainLegProgress(chain, p);
       chain.legs.forEach((leg, i) => {
         const partial = partialLine(leg, per[i]);
-        if (partial) lines.push({ feature: partial, mode: leg.mode, style: "route" });
-        if (segment === seg && per[i] > 0 && per[i] < 1) {
-          head = { lngLat: pointAlong(leg, per[i]), mode: leg.mode };
-        }
+        const active = segment === seg && per[i] > 0 && per[i] < 1;
+        if (partial) lines.push({ feature: partial, mode: leg.mode, active, style: "route" });
+        if (active) head = { lngLat: pointAlong(leg, per[i]), mode: leg.mode };
       });
       if (segment === seg) {
         const text = transitText(file);

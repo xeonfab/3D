@@ -82,11 +82,14 @@ export const SupplyChainVideo = ({ stepsFile, brand }: VideoProps) => {
   const onScreen = (p: [number, number] | null): p is [number, number] =>
     p !== null && p[0] > -100 && p[0] < width + 100 && p[1] > -100 && p[1] < height + 100;
 
+  // Cap du véhicule : direction à l'écran entre la frame précédente et celle-ci.
   const headPos = scene.head ? project(scene.head.lngLat) : null;
-  const prevHead =
-    scene.head && frame > 0 ? sceneAt(ctx, frame - 1).head : null;
+  const prevHead = scene.head && frame > 0 ? sceneAt(ctx, frame - 1).head : null;
   const prevHeadPos = prevHead ? project(prevHead.lngLat) : null;
-  const dirX = headPos && prevHeadPos ? Math.sign(headPos[0] - prevHeadPos[0]) || 1 : 1;
+  const heading =
+    headPos && prevHeadPos && (headPos[0] !== prevHeadPos[0] || headPos[1] !== prevHeadPos[1])
+      ? (Math.atan2(headPos[0] - prevHeadPos[0], -(headPos[1] - prevHeadPos[1])) * 180) / Math.PI
+      : 0;
   const transitPos = scene.transitLine ? project(scene.transitLine.anchor) : null;
 
   return (
@@ -128,10 +131,10 @@ export const SupplyChainVideo = ({ stepsFile, brand }: VideoProps) => {
           <Vehicle
             x={headPos[0]}
             y={headPos[1]}
-            dirX={dirX}
+            heading={heading}
             mode={scene.head.mode}
             color={color}
-            size={L.vehicleSize}
+            size={L.vehicleSize * look.vehicleScale}
           />
         ) : (
           <Pulse x={headPos[0]} y={headPos[1]} color={color} active={0} appearFrame={0} />

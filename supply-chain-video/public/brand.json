@@ -4,5 +4,8 @@
   "logo": "logo.png",
   "endLine": "Récolté en janvier. Torréfié mardi dernier.",
   "music": "music.mp3",
-  "musicGainDb": -18
+  "musicGainDb": -18,
+  "map": {
+    "theme": "satellite"
+  }
 }

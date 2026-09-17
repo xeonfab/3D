@@ -52,6 +52,12 @@ export const DEFAULT_CAMERA: CameraSettings = {
 export const DEFAULT_LOOK: MapLook = {
   theme: "day",
   style: "",
+  pitch: 0,
+  terrain: false,
+  terrainExaggeration: 1.5,
+  cityLights: false,
+  trailGlow: false,
+  vehicleScale: 1,
   globe: true,
   atmosphere: true,
   hillshade: true,
@@ -71,11 +77,39 @@ export const NIGHT_LOOK: Partial<MapLook> = {
   countries: true,
 };
 
+/** Surcharges du thème `satellite` : Terre vue en perspective, façon documentaire. */
+export const SATELLITE_LOOK: Partial<MapLook> = {
+  pitch: 55,
+  terrain: true,
+  terrainExaggeration: 1.5,
+  cityLights: true,
+  trailGlow: true,
+  vehicleScale: 1.7,
+  hillshade: false,
+};
+
 /** Style Mapbox de chaque thème. */
 export const THEME_STYLE: Record<MapLook["theme"], string> = {
   day: "mapbox://styles/mapbox/outdoors-v12",
   night: "mapbox://styles/mapbox/dark-v11",
+  satellite: "mapbox://styles/mapbox/satellite-streets-v12",
 };
+
+/**
+ * Lumières des villes : NASA Black Marble (VIIRS), servi par GIBS en tuiles
+ * web-mercator publiques (pas de token). Composite annuel, zoom max 8.
+ */
+export const CITY_LIGHTS = {
+  tiles:
+    "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png",
+  tileSize: 256,
+  maxzoom: 8,
+  opacity: 0.75,
+  attribution: "NASA Earth Observatory / VIIRS Black Marble",
+};
+
+/** Traînée lumineuse : opacités le long du tracé en cours (queue → tête). */
+export const TRAIL = { tailOpacity: 0.1, headWidth: 6, glowWidth: 22, glowOpacity: 0.35 };
 
 /** Atmosphère (fog Mapbox) par thème. */
 export const ATMOSPHERE: Record<
@@ -96,12 +130,20 @@ export const ATMOSPHERE: Record<
     spaceColor: "rgb(3, 4, 9)",
     starIntensity: 0.35,
   },
+  satellite: {
+    color: "rgb(186, 210, 235)",
+    highColor: "rgb(36, 92, 223)",
+    horizonBlend: 0.03,
+    spaceColor: "rgb(4, 6, 14)",
+    starIntensity: 0.6,
+  },
 };
 
 /** Couleurs de l'aperçu hors ligne (Natural Earth) par thème. */
 export const OFFLINE_COLORS: Record<MapLook["theme"], { sea: string; land: string; coast: string; text: string }> = {
   day: { sea: "#a9c6e0", land: "#ece7da", coast: "#8aa0b4", text: "#5a6a7a" },
   night: { sea: "#0a1220", land: "#2b3038", coast: "#6f8296", text: "#6f8296" },
+  satellite: { sea: "#0e2a4a", land: "#5a6a3c", coast: "#8fa4b8", text: "#b7c3cf" },
 };
 
 /** Opacité des voiles sombres d'intro et de fin. */

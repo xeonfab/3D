@@ -10,6 +10,7 @@ import {
 } from "remotion";
 import {
   ATMOSPHERE,
+  CITY_LIGHTS,
   COASTLINE,
   COUNTRY_BORDERS,
   COUNTRY_BOUNDARIES,
@@ -17,6 +18,7 @@ import {
   COUNTRY_LABELS,
   HILLSHADE,
   THEME_STYLE,
+  TRAIL,
 } from "./defaults";
 import type { SceneLine } from "./scene";
 import type { Camera, MapLook } from "./types";
@@ -44,15 +46,52 @@ type Props = {
 const firstSymbolLayer = (map: mapboxgl.Map) =>
   map.getStyle()?.layers?.find((l) => l.type === "symbol")?.id;
 
-const addHillshade = (map: mapboxgl.Map) => {
-  // Le style a déjà son propre relief (outdoors) : on n'en ajoute pas un second.
-  if (map.getStyle()?.layers?.some((l) => l.type === "hillshade")) return;
+const ensureDem = (map: mapboxgl.Map) => {
+  if (map.getSource(DEM_SOURCE)) return;
   map.addSource(DEM_SOURCE, {
     type: "raster-dem",
     url: HILLSHADE.source,
     tileSize: HILLSHADE.tileSize,
     maxzoom: HILLSHADE.maxzoom,
   });
+};
+
+/** Terrain 3D : la carte prend du relief (vraies altitudes Mapbox Terrain). */
+const addTerrain = (map: mapboxgl.Map, exaggeration: number) => {
+  ensureDem(map);
+  map.setTerrain({ source: DEM_SOURCE, exaggeration });
+};
+
+/** Lumières des villes : raster NASA Black Marble fondu sous les labels. */
+const addCityLights = (map: mapboxgl.Map) => {
+  map.addSource("city-lights", {
+    type: "raster",
+    tiles: [CITY_LIGHTS.tiles],
+    tileSize: CITY_LIGHTS.tileSize,
+    maxzoom: CITY_LIGHTS.maxzoom,
+    attribution: CITY_LIGHTS.attribution,
+  });
+  map.addLayer(
+    {
+      id: "city-lights",
+      type: "raster",
+      source: "city-lights",
+      paint: {
+        "raster-opacity": CITY_LIGHTS.opacity,
+        "raster-fade-duration": 0,
+        // Fond noir du composite rendu transparent : seules les lumières ressortent.
+        "raster-brightness-min": 0.15,
+        "raster-contrast": 0.3,
+      },
+    },
+    firstSymbolLayer(map),
+  );
+};
+
+const addHillshade = (map: mapboxgl.Map) => {
+  // Le style a déjà son propre relief (outdoors) : on n'en ajoute pas un second.
+  if (map.getStyle()?.layers?.some((l) => l.type === "hillshade")) return;
+  ensureDem(map);
   map.addLayer(
     {
       id: "hillshade",
@@ -236,7 +275,7 @@ export const MapScene = ({
       center: camera.center,
       zoom: camera.zoom,
       bearing: 0,
-      pitch: 0,
+      pitch: look.pitch,
       interactive: false,
       attributionControl: false,
       // Aucune animation interne : tout est piloté par le numéro de frame.
@@ -279,6 +318,8 @@ export const MapScene = ({
         ["terre/mer", true, () => applyLandSea(map, look)],
         ["pays", look.countries, () => emphasizeCountries(map)],
         ["relief", look.hillshade, () => addHillshade(map)],
+        ["terrain 3D", look.terrain, () => addTerrain(map, look.terrainExaggeration)],
+        ["lumières des villes", look.cityLights, () => addCityLights(map)],
         ["pays teintés", look.highlightCountries, () => addCountryHighlight(map, color)],
         ["côtes", look.coastline, () => addCoastline(map)],
       ];
@@ -310,7 +351,12 @@ export const MapScene = ({
         id: "route-land",
         type: "line",
         source: ROUTE_SOURCE,
-        filter: ["all", ["==", ["get", "style"], "route"], ["==", ["get", "mode"], "land"]],
+        filter: [
+          "all",
+          ["==", ["get", "style"], "route"],
+          ["!=", ["get", "mode"], "sea"],
+          ["!", ["to-boolean", ["get", "trail"]]],
+        ],
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": color, "line-width": 4 },
       });
@@ -319,10 +365,63 @@ export const MapScene = ({
         id: "route-sea",
         type: "line",
         source: ROUTE_SOURCE,
-        filter: ["all", ["==", ["get", "style"], "route"], ["==", ["get", "mode"], "sea"]],
+        filter: [
+          "all",
+          ["==", ["get", "style"], "route"],
+          ["==", ["get", "mode"], "sea"],
+          ["!", ["to-boolean", ["get", "trail"]]],
+        ],
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": color, "line-width": 4, "line-dasharray": [0.2, 2.2] },
       });
+      // Traînée lumineuse sur le tracé en cours : queue estompée → tête éclatante.
+      if (look.trailGlow) {
+        map.addSource("trail", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+          lineMetrics: true,
+        });
+        map.addLayer({
+          id: "trail-glow",
+          type: "line",
+          source: "trail",
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: {
+            "line-width": TRAIL.glowWidth,
+            "line-blur": TRAIL.glowWidth / 2,
+            "line-opacity": TRAIL.glowOpacity,
+            "line-gradient": [
+              "interpolate",
+              ["linear"],
+              ["line-progress"],
+              0,
+              "rgba(0,0,0,0)",
+              1,
+              color,
+            ],
+          },
+        });
+        map.addLayer({
+          id: "trail",
+          type: "line",
+          source: "trail",
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: {
+            "line-width": TRAIL.headWidth,
+            "line-gradient": [
+              "interpolate",
+              ["linear"],
+              ["line-progress"],
+              0,
+              `rgba(255,255,255,${TRAIL.tailOpacity})`,
+              0.7,
+              color,
+              1,
+              "#ffffff",
+            ],
+          },
+        });
+      }
       // Terroir : trait fin ferme → atelier, et cercle du rayon.
       map.addLayer({
         id: "spoke",
@@ -361,16 +460,24 @@ export const MapScene = ({
 
     const handle = delayRender(`Rendu Mapbox frame ${frame}`);
 
-    map.jumpTo({ center: camera.center, zoom: camera.zoom, bearing: 0, pitch: 0 });
+    map.jumpTo({ center: camera.center, zoom: camera.zoom, bearing: 0, pitch: look.pitch });
 
+    // Avec la traînée, le tracé en cours part dans la source « trail » (dégradé).
     const features = lines.map((l) => ({
       ...l.feature,
-      properties: { ...l.feature.properties, mode: l.mode, style: l.style },
+      properties: { ...l.feature.properties, mode: l.mode, style: l.style, trail: look.trailGlow && l.active },
     }));
     (map.getSource(ROUTE_SOURCE) as mapboxgl.GeoJSONSource).setData({
       type: "FeatureCollection",
       features,
     });
+    const trail = map.getSource("trail") as mapboxgl.GeoJSONSource | undefined;
+    if (trail) {
+      trail.setData({
+        type: "FeatureCollection",
+        features: features.filter((f) => f.properties.trail),
+      });
+    }
     setReachedCountries(map, reachedCountries);
 
     onFrameApplied(frame);

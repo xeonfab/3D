@@ -65,7 +65,8 @@ Si Remotion ne peut pas télécharger son Chrome headless, indiquez un binaire
 ### Aperçu sans token ni réseau
 
 `REMOTION_MAP_OFFLINE=1` remplace la carte Mapbox par un fond Natural Earth
-50 m en SVG (projection Mercator, couleurs du thème). Utile pour vérifier la timeline, les
+50 m en SVG (projection Mercator, couleurs du thème ; ni relief, ni
+inclinaison, ni satellite). Utile pour vérifier la timeline, les
 tracés et les overlays hors ligne — ce n'est **pas** le rendu final.
 
 ```sh
@@ -114,7 +115,7 @@ Niveau étape :
 | `place` | Optionnel. Lieu lisible (« Guji », « Liffré, Bretagne ») : ligne « Place, Pays » du cartouche. |
 | `lat`, `lng` | Coordonnées réelles (degrés décimaux). |
 | `photo` | Fichier image dans `public/`. Ignoré pour un transit. Grand format pour le premier et le dernier actor, vignette pour les autres. |
-| `mode` | `"land"` (défaut) ou `"sea"` : mode du **trajet qui part de cette étape**. Un tronçon `sea` est tracé en pointillés. |
+| `mode` | `"land"` (défaut, camion), `"sea"` (bateau, pointillés) ou `"air"` (avion) : mode du **trajet qui part de cette étape**. |
 | `waypoints` | Points de passage `[lat, lng]` du trajet qui part de cette étape. **Obligatoire pour `sea`** : c'est le JSON qui porte la route (détroits, canaux, caps), le code relie les points par des arcs great-circle et ne traverse jamais une terre de lui-même. |
 | `country` | Optionnel, ISO alpha-2. Traduit en clair sur le cartouche (« Éthiopie », via `Intl.DisplayNames`, langue `brand.locale`) et le pays se teinte dans la couleur de marque quand l'actor est atteint. |
 | `final` | Marque l'étape d'arrivée (zoom ville). |
@@ -214,7 +215,13 @@ indique où ajouter des waypoints. Il écrit aussi `out/route-check*.svg`.
   - `theme` : `day` (défaut) = `outdoors-v12` tel quel — relief, végétation,
     noms de lieux, atmosphère claire ; `night` = `dark-v11` recoloré (mer
     bleu nuit, terre anthracite, liseré de côte, frontières et noms de pays
-    renforcés, étoiles).
+    renforcés, étoiles) ; **`satellite`** = imagerie satellite
+    (`satellite-streets-v12`), caméra inclinée à 55°, terrain 3D (×1,5),
+    atmosphère et étoiles, lumières des villes NASA Black Marble, traînée
+    lumineuse sur le tracé en cours, véhicules ×1,7 vus de dessus et orientés
+    selon le cap.
+  - Réglables un par un : `pitch`, `terrain`, `terrainExaggeration`,
+    `cityLights`, `trailGlow`, `vehicleScale`.
   - `style` : URL d'un style Mapbox pour remplacer celui du thème (ex. un
     style de marque fait dans Mapbox Studio).
   - `globe` + `atmosphère`, `hillshade` (ignoré si le style a déjà son
