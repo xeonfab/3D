@@ -48,7 +48,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   const rendersResult = await getRendersAction(product.id);
   const initialRenders = rendersResult.ok
     ? rendersResult.data
-    : { renders: [], publicUrl: null, estimateSeconds: 60 };
+    : { renders: [], publicUrl: null, embedSnippet: null, estimateSeconds: 60 };
 
   return (
     <ProductEditor

@@ -132,6 +132,16 @@ begin
   assert (select name from public.products where id = '20000000-0000-4000-8000-000000000001') = 'Produit A';
 end $$;
 
+-- Les compteurs de page publique ne sont pas appelables par un utilisateur.
+do $$
+begin
+  begin
+    perform public.increment_public_page_counters('org-a-produit-a', false);
+    raise exception 'un utilisateur ne doit pas pouvoir incrémenter les compteurs';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+
 reset role;
 do $$
 declare n integer;

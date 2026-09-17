@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, Download, Loader2, RefreshCw } from "lucide-react";
+import { Download, Loader2, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +18,7 @@ import type { RenderView } from "@/lib/render/service";
 import type { RenderFormat } from "@/lib/supabase/types";
 
 import { getRendersAction, startRendersAction, type RenderOverview } from "../render-actions";
+import { SharePanel } from "./share-panel";
 
 type GenerateDialogProps = {
   open: boolean;
@@ -52,7 +53,6 @@ export function GenerateDialog({
   const [selected, setSelected] = useState<RenderFormat[]>(["vertical", "horizontal"]);
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const active = overview.renders.some((r) => r.status === "queued" || r.status === "rendering");
@@ -86,13 +86,6 @@ export function GenerateDialog({
     }
     setOverview(r.data);
     onRendersChange?.(r.data.renders);
-  }
-
-  async function copyLink() {
-    if (!overview.publicUrl) return;
-    await navigator.clipboard.writeText(overview.publicUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
@@ -227,13 +220,15 @@ export function GenerateDialog({
               ))}
             </ul>
 
-            {overview.publicUrl && overview.renders.some((r) => r.status === "done") ? (
-              <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-                <Button variant="outline" size="sm" onClick={() => void copyLink()}>
-                  {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-                  {copied ? "Lien copié" : "Copier le lien de la page publique"}
-                </Button>
-                <span className="truncate text-xs text-muted-foreground">{overview.publicUrl}</span>
+            {overview.publicUrl &&
+            overview.embedSnippet &&
+            overview.renders.some((r) => r.status === "done") ? (
+              <div className="border-t border-border pt-4">
+                <SharePanel
+                  productId={productId}
+                  publicUrl={overview.publicUrl}
+                  embedSnippet={overview.embedSnippet}
+                />
               </div>
             ) : null}
 

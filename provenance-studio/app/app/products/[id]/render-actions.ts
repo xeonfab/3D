@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { requireMembership } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
-import { ensurePublicPage, publicPageUrl } from "@/lib/public-pages";
+import { embedSnippet, ensurePublicPage, publicPageUrl } from "@/lib/public-pages";
 import {
   estimateRenderSeconds,
   refreshRender,
@@ -45,6 +45,7 @@ async function loadContext(productId: string) {
 export type RenderOverview = {
   renders: RenderView[];
   publicUrl: string | null;
+  embedSnippet: string | null;
   estimateSeconds: number;
 };
 
@@ -91,6 +92,7 @@ export async function getRendersAction(
     data: {
       renders: renders.sort((a, b) => (a.format < b.format ? 1 : -1)),
       publicUrl: page ? publicPageUrl(page.slug, publicEnv.NEXT_PUBLIC_SITE_URL) : null,
+      embedSnippet: page ? embedSnippet(page.slug, publicEnv.NEXT_PUBLIC_SITE_URL) : null,
       estimateSeconds: estimateRenderSeconds(
         videoDurationSeconds(located.map((s) => ({ durationSeconds: s.duration_seconds }))),
       ),

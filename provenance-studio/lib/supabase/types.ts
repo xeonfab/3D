@@ -198,6 +198,10 @@ export type Database = {
       is_org_member_path: { Args: { object_name: string }; Returns: boolean };
       plan_max_products: { Args: { p: PlanType }; Returns: number | null };
       plan_max_steps: { Args: { p: PlanType }; Returns: number };
+      increment_public_page_counters: {
+        Args: { page_slug: string; from_qr: boolean };
+        Returns: undefined;
+      };
     };
     Enums: {
       plan_type: PlanType;

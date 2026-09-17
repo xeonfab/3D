@@ -58,11 +58,13 @@ export function ProductEditor({
   const [rendering, setRendering] = useState(
     initialRenders.renders.some((r) => r.status === "queued" || r.status === "rendering"),
   );
-  const onRendersChange = useCallback(
-    (renders: RenderView[]) =>
-      setRendering(renders.some((r) => r.status === "queued" || r.status === "rendering")),
-    [],
+  const [shareable, setShareable] = useState(
+    Boolean(initialRenders.publicUrl) && initialRenders.renders.some((r) => r.status === "done"),
   );
+  const onRendersChange = useCallback((renders: RenderView[]) => {
+    setRendering(renders.some((r) => r.status === "queued" || r.status === "rendering"));
+    if (renders.some((r) => r.status === "done")) setShareable(true);
+  }, []);
   const [steps, setSteps] = useState(initialSteps);
   const [selectedId, setSelectedId] = useState<string | null>(initialSteps[0]?.id ?? null);
   const [adding, setAdding] = useState(false);
@@ -253,6 +255,7 @@ export function ProductEditor({
         onChange={onProductChange}
         onGenerate={() => setGenerateOpen(true)}
         generating={rendering}
+        onShare={shareable ? () => setGenerateOpen(true) : undefined}
         generateDisabledReason={
           readyForVideo ? undefined : "Localisez au moins deux étapes pour générer la vidéo."
         }

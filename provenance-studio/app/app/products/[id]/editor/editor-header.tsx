@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Check, CloudOff, Loader2, Video } from "lucide-react";
+import { ArrowLeft, Check, CloudOff, Loader2, Share2, Video } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ type EditorHeaderProps = {
   onGenerate?: () => void;
   generating?: boolean;
   generateDisabledReason?: string;
+  onShare?: () => void;
 };
 
 export function EditorHeader({
@@ -29,6 +30,7 @@ export function EditorHeader({
   onGenerate,
   generating,
   generateDisabledReason,
+  onShare,
 }: EditorHeaderProps) {
   const status =
     saveStatus === "saving"
@@ -92,31 +94,39 @@ export function EditorHeader({
           </div>
         </div>
 
-        {generateDisabledReason ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                tabIndex={0}
-                className="inline-block w-fit rounded-md focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Button type="button" size="lg" disabled>
-                  <Video aria-hidden="true" />
-                  Générer la vidéo
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{generateDisabledReason}</TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button type="button" size="lg" onClick={onGenerate}>
-            {generating ? (
-              <Loader2 className="animate-spin" aria-hidden="true" />
-            ) : (
-              <Video aria-hidden="true" />
-            )}
-            {generating ? "Vidéo en cours…" : "Générer la vidéo"}
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {onShare ? (
+            <Button type="button" variant="outline" size="lg" onClick={onShare}>
+              <Share2 aria-hidden="true" />
+              Partager
+            </Button>
+          ) : null}
+          {generateDisabledReason ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  tabIndex={0}
+                  className="inline-block w-fit rounded-md focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Button type="button" size="lg" disabled>
+                    <Video aria-hidden="true" />
+                    Générer la vidéo
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{generateDisabledReason}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button type="button" size="lg" onClick={onGenerate}>
+              {generating ? (
+                <Loader2 className="animate-spin" aria-hidden="true" />
+              ) : (
+                <Video aria-hidden="true" />
+              )}
+              {generating ? "Vidéo en cours…" : "Générer la vidéo"}
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   );
