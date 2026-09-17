@@ -16,7 +16,7 @@ import {
   COUNTRY_HIGHLIGHT_OPACITY,
   COUNTRY_LABELS,
   HILLSHADE,
-  MAPBOX_STYLE,
+  THEME_STYLE,
 } from "./defaults";
 import type { SceneLine } from "./scene";
 import type { Camera, MapLook } from "./types";
@@ -45,6 +45,8 @@ const firstSymbolLayer = (map: mapboxgl.Map) =>
   map.getStyle()?.layers?.find((l) => l.type === "symbol")?.id;
 
 const addHillshade = (map: mapboxgl.Map) => {
+  // Le style a déjà son propre relief (outdoors) : on n'en ajoute pas un second.
+  if (map.getStyle()?.layers?.some((l) => l.type === "hillshade")) return;
   map.addSource(DEM_SOURCE, {
     type: "raster-dem",
     url: HILLSHADE.source,
@@ -229,7 +231,7 @@ export const MapScene = ({
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: MAPBOX_STYLE,
+      style: look.style || THEME_STYLE[look.theme],
       projection: look.globe ? "globe" : "mercator",
       center: camera.center,
       zoom: camera.zoom,
@@ -264,12 +266,13 @@ export const MapScene = ({
 
     map.on("load", () => {
       if (look.atmosphere) {
+        const fog = ATMOSPHERE[look.theme];
         map.setFog({
-          color: ATMOSPHERE.color,
-          "high-color": ATMOSPHERE.highColor,
-          "horizon-blend": ATMOSPHERE.horizonBlend,
-          "space-color": ATMOSPHERE.spaceColor,
-          "star-intensity": ATMOSPHERE.starIntensity,
+          color: fog.color,
+          "high-color": fog.highColor,
+          "horizon-blend": fog.horizonBlend,
+          "space-color": fog.spaceColor,
+          "star-intensity": fog.starIntensity,
         });
       }
       const cosmetic: [string, boolean, () => void][] = [

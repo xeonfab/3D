@@ -44,27 +44,82 @@ export const DEFAULT_CAMERA: CameraSettings = {
   farmZoomOffset: 1.2,
 };
 
-/** Habillage par défaut, surchargeable via `brand.json` → `"map"`. */
+/**
+ * Habillage par défaut, surchargeable via `brand.json` → `"map"`.
+ * Thème `day` : outdoors-v12 tel quel (relief, végétation, noms de lieux).
+ * Thème `night` : dark-v11 recoloré (voir NIGHT_LOOK).
+ */
 export const DEFAULT_LOOK: MapLook = {
+  theme: "day",
+  style: "",
   globe: true,
   atmosphere: true,
   hillshade: true,
-  seaColor: "#0a1220",
-  landColor: "#1f2329",
-  coastline: true,
-  countries: true,
+  seaColor: "",
+  landColor: "",
+  coastline: false,
+  countries: false,
   highlightCountries: true,
   vehicle: true,
 };
 
-/** Atmosphère (fog Mapbox) : nuit profonde, halo bleu à l'horizon, étoiles. */
-export const ATMOSPHERE = {
-  color: "rgb(14, 18, 30)",
-  highColor: "rgb(28, 40, 80)",
-  horizonBlend: 0.06,
-  spaceColor: "rgb(3, 4, 9)",
-  starIntensity: 0.35,
+/** Surcharges appliquées quand `theme` vaut `night` (avant celles de brand.json). */
+export const NIGHT_LOOK: Partial<MapLook> = {
+  seaColor: "#0a1220",
+  landColor: "#2b3038",
+  coastline: true,
+  countries: true,
 };
+
+/** Style Mapbox de chaque thème. */
+export const THEME_STYLE: Record<MapLook["theme"], string> = {
+  day: "mapbox://styles/mapbox/outdoors-v12",
+  night: "mapbox://styles/mapbox/dark-v11",
+};
+
+/** Atmosphère (fog Mapbox) par thème. */
+export const ATMOSPHERE: Record<
+  MapLook["theme"],
+  { color: string; highColor: string; horizonBlend: number; spaceColor: string; starIntensity: number }
+> = {
+  day: {
+    color: "rgb(225, 232, 240)",
+    highColor: "rgb(130, 170, 225)",
+    horizonBlend: 0.05,
+    spaceColor: "rgb(12, 16, 40)",
+    starIntensity: 0.08,
+  },
+  night: {
+    color: "rgb(14, 18, 30)",
+    highColor: "rgb(28, 40, 80)",
+    horizonBlend: 0.06,
+    spaceColor: "rgb(3, 4, 9)",
+    starIntensity: 0.35,
+  },
+};
+
+/** Couleurs de l'aperçu hors ligne (Natural Earth) par thème. */
+export const OFFLINE_COLORS: Record<MapLook["theme"], { sea: string; land: string; coast: string; text: string }> = {
+  day: { sea: "#a9c6e0", land: "#ece7da", coast: "#8aa0b4", text: "#5a6a7a" },
+  night: { sea: "#0a1220", land: "#2b3038", coast: "#6f8296", text: "#6f8296" },
+};
+
+/** Opacité des voiles sombres d'intro et de fin. */
+export const VEIL_OPACITY = { intro: 0.45, ending: 0.5 };
+
+/** Langue par défaut des noms de pays (Intl.DisplayNames). */
+export const DEFAULT_LOCALE = "fr";
+
+/**
+ * Chapeaux affichés au-dessus des cartouches, dérivés du rôle du plan.
+ * `{i}` / `{n}` : numéro et nombre de fermes (terroir).
+ */
+export const CHAPTER_LINES = {
+  origine: { first: "D'où ça vient", middle: "Qui le transforme", last: "Qui le fabrique" },
+  terroir: { first: "Ferme {i} / {n}", middle: "Ferme {i} / {n}", last: "L'atelier" },
+} as const;
+/** Origine : ligne au milieu de l'arc ; `{text}` = intermédiaires ou sourcing. */
+export const TRANSIT_LINE = "Et entre les deux : {text}";
 
 /** Liseré de côte, frontières et labels de pays. */
 export const COASTLINE = { color: "#6f8296", width: 1.1, opacity: 0.55 };
@@ -99,5 +154,3 @@ export const HILLSHADE = {
 export const DEFAULT_MUSIC_FILE = "music.mp3";
 export const DEFAULT_MUSIC_GAIN_DB = -18;
 
-/** Style Mapbox utilisé pour la carte. */
-export const MAPBOX_STYLE = "mapbox://styles/mapbox/dark-v11";

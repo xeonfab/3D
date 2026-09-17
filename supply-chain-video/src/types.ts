@@ -15,8 +15,8 @@ export type Step = {
   personName?: string | null;
   /** Ignoré pour un transit. */
   caption?: string;
-  /** Ville mise en évidence sur le cartouche (utile pour le dernier actor). */
-  city?: string;
+  /** Lieu lisible (ville, région) : ligne « Place, Pays » du cartouche. */
+  place?: string;
   lat: number;
   lng: number;
   /** Nom de fichier dans `public/` (ex. "farm.jpg"). Ignoré pour un transit. */
@@ -62,6 +62,10 @@ export type CameraSettings = {
 
 /** Habillage de la carte, surchargeable depuis `brand.json` → `"map"`. */
 export type MapLook = {
+  /** `day` : outdoors-v12, couleurs naturelles. `night` : dark-v11 recoloré. */
+  theme: "day" | "night";
+  /** URL de style Mapbox ; vide = style du thème. */
+  style: string;
   /** Projection globe (Terre ronde aux petits zooms) au lieu de Mercator. */
   globe: boolean;
   /** Atmosphère / halo d'horizon / étoiles (fog Mapbox). */
@@ -71,9 +75,9 @@ export type MapLook = {
   /** Couleur de la mer et de la terre (hex) ; vide = couleurs du style. */
   seaColor: string;
   landColor: string;
-  /** Liseré lumineux le long des côtes. */
+  /** Liseré le long des côtes (utile sur dark-v11 ; outdoors en a déjà). */
   coastline: boolean;
-  /** Frontières et labels de pays renforcés. */
+  /** Frontières et labels de pays renforcés (pensé pour dark-v11). */
   countries: boolean;
   /** Teinte les pays des étapes (champ `country`) dans la couleur de marque. */
   highlightCountries: boolean;
@@ -118,6 +122,8 @@ export type Brand = {
   musicGainDb?: number;
   /** Habillage de la carte (voir `MapLook` et `defaults.ts`). */
   map?: Partial<MapLook>;
+  /** Langue des noms de pays (BCP 47, défaut "fr"). */
+  locale?: string;
 };
 
 export type LngLat = [number, number];

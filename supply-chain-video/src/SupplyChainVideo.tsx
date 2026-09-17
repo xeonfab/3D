@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { AbsoluteFill, Audio, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { toScreen } from "./camera";
 import { dbToGain, resolveCamera, resolveLook, resolveTiming } from "./data";
-import { DEFAULT_MUSIC_FILE, DEFAULT_MUSIC_GAIN_DB, GLOBE_HIDE_KM } from "./defaults";
+import { DEFAULT_LOCALE, DEFAULT_MUSIC_FILE, DEFAULT_MUSIC_GAIN_DB, GLOBE_HIDE_KM } from "./defaults";
 import { MapScene } from "./MapScene";
 import { OfflineMap } from "./OfflineMap";
 import { Card } from "./overlays/Card";
@@ -30,12 +30,15 @@ export const SupplyChainVideo = ({ stepsFile, brand }: VideoProps) => {
   const ctx = useMemo(
     () =>
       stepsFile
-        ? buildSceneContext(stepsFile, resolveTiming(stepsFile), resolveCamera(stepsFile), {
-            width,
-            height,
-          })
+        ? buildSceneContext(
+            stepsFile,
+            resolveTiming(stepsFile),
+            resolveCamera(stepsFile),
+            { width, height },
+            brand?.locale ?? DEFAULT_LOCALE,
+          )
         : null,
-    [stepsFile, width, height],
+    [stepsFile, brand, width, height],
   );
   const look = useMemo(() => (brand ? resolveLook(brand) : null), [brand]);
 
@@ -89,7 +92,7 @@ export const SupplyChainVideo = ({ stepsFile, brand }: VideoProps) => {
   return (
     <AbsoluteFill style={{ background: "#0b0b0e" }}>
       {OFFLINE ? (
-        <OfflineMap camera={camera} lines={scene.lines} color={color} />
+        <OfflineMap camera={camera} lines={scene.lines} color={color} theme={look.theme} />
       ) : (
         <MapScene
           camera={camera}

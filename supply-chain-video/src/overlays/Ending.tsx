@@ -1,4 +1,5 @@
 import { Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { VEIL_OPACITY } from "../defaults";
 import type { Brand } from "../types";
 import { FONT_FAMILY, useLayout } from "./layout";
 
@@ -11,7 +12,7 @@ export const Ending = ({ brand, start }: Props) => {
   const L = useLayout();
 
   const t = frame - start;
-  const veil = interpolate(t, [0, fps * 0.6], [0, 0.6], {
+  const veil = interpolate(t, [0, fps * 0.6], [0, VEIL_OPACITY.ending], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });

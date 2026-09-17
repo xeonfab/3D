@@ -1,9 +1,12 @@
 import { easeInOutCubic, flyToAt, zoomForBounds, zoomForContext } from "./camera";
 import {
+  CHAPTER_LINES,
+  DEFAULT_LOCALE,
   INTERMEDIARIES_LINE,
   INTRO_SUBTITLE,
   RADIUS_LINE,
   RADIUS_ROUND_KM,
+  TRANSIT_LINE,
 } from "./defaults";
 import {
   buildChain,
@@ -48,10 +51,13 @@ export type SceneLine = {
 };
 
 export type Card = {
+  /** Chapeau dérivé du rôle du plan (« D'où ça vient », « Ferme 1 / 3 »…). */
+  chapter: string;
   personName: string | null;
   title: string;
   caption: string | null;
-  city: string | null;
+  /** « Guji, Éthiopie » : `place` + nom du pays traduit (Intl.DisplayNames). */
+  location: string | null;
   photo: string | null;
   /** Héros (premier / dernier actor) : photo grand format. */
   large: boolean;
@@ -82,6 +88,8 @@ export type SceneContext = {
   timing: Timing;
   cam: CameraSettings;
   viewport: Viewport;
+  /** Langue des noms de pays. */
+  locale: string;
   timeline: Timeline;
   /** Caméra d'arrêt de chaque étape (actors seulement pour origine). */
   holdCameras: (Camera | null)[];
@@ -106,6 +114,7 @@ export const buildSceneContext = (
   timing: Timing,
   cam: CameraSettings,
   viewport: Viewport,
+  locale: string = DEFAULT_LOCALE,
 ): SceneContext => {
   const { steps } = file;
   const timeline = buildTimeline(file, timing);
@@ -158,7 +167,7 @@ export const buildSceneContext = (
     }
   }
 
-  return { file, timing, cam, viewport, timeline, holdCameras, chains, directLegs, terroir };
+  return { file, timing, cam, viewport, locale, timeline, holdCameras, chains, directLegs, terroir };
 };
 
 const cameraOf = (ctx: SceneContext, step: number): Camera =>
@@ -241,14 +250,38 @@ const cameraAt = (ctx: SceneContext, segment: Segment, frame: number): Camera =>
   }
 };
 
+/** Nom du pays dans la langue demandée (« ET » → « Éthiopie »), sans liste en dur. */
+export const countryName = (iso: string, locale: string): string => {
+  try {
+    return new Intl.DisplayNames([locale], { type: "region" }).of(iso) ?? iso;
+  } catch {
+    return iso;
+  }
+};
+
+const locationOf = (ctx: SceneContext, step: StepsFile["steps"][number]): string | null => {
+  const parts = [step.place, step.country ? countryName(step.country, ctx.locale) : null].filter(
+    (p): p is string => Boolean(p),
+  );
+  return parts.length ? parts.join(", ") : null;
+};
+
+const chapterOf = (ctx: SceneContext, segment: Extract<Segment, { kind: "actor" }>): string => {
+  const lines = CHAPTER_LINES[ctx.file.narrative];
+  const template = lines[segment.role];
+  const farms = ctx.file.steps.length - 1;
+  return template.replace("{i}", String(segment.step + 1)).replace("{n}", String(farms));
+};
+
 const cardFor = (ctx: SceneContext, segment: Extract<Segment, { kind: "actor" }>): Card => {
   const step = ctx.file.steps[segment.step];
   const fade = Math.round(ctx.timing.cardFadeSeconds * ctx.timing.fps);
   return {
+    chapter: chapterOf(ctx, segment),
     personName: step.personName ?? null,
     title: step.title,
     caption: step.caption ?? null,
-    city: step.city ?? null,
+    location: locationOf(ctx, step),
     photo: step.photo ?? null,
     large: segment.role !== "middle",
     start: segment.flightEnd,
@@ -258,10 +291,11 @@ const cardFor = (ctx: SceneContext, segment: Extract<Segment, { kind: "actor" }>
 };
 
 const transitText = (file: StepsFile): string | null => {
-  if (typeof file.intermediariesCount === "number")
-    return INTERMEDIARIES_LINE.replace("{n}", String(file.intermediariesCount));
-  if (file.sourcingLine) return file.sourcingLine;
-  return null;
+  const inner =
+    typeof file.intermediariesCount === "number"
+      ? INTERMEDIARIES_LINE.replace("{n}", String(file.intermediariesCount))
+      : file.sourcingLine || null;
+  return inner ? TRANSIT_LINE.replace("{text}", inner) : null;
 };
 
 export const sceneAt = (ctx: SceneContext, frame: number): SceneState => {

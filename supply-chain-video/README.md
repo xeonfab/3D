@@ -1,8 +1,8 @@
 # Qui fait le produit — vidéo animée sur carte
 
 Génère une vidéo MP4 (9:16 et 16:9, 30 fps) qui montre **qui fait un
-produit** sur une **vraie carte** (Mapbox GL JS, style `dark-v11`, vraies
-coordonnées). Les héros sont les personnes : la vidéo ne raconte pas la
+produit** sur une **vraie carte** (Mapbox GL JS, style `outdoors-v12` par
+défaut, vraies coordonnées). Les héros sont les personnes : la vidéo ne raconte pas la
 logistique. Deux récits :
 
 - **origine** — un premier héros (la ferme), des acteurs intermédiaires, le
@@ -65,7 +65,7 @@ Si Remotion ne peut pas télécharger son Chrome headless, indiquez un binaire
 ### Aperçu sans token ni réseau
 
 `REMOTION_MAP_OFFLINE=1` remplace la carte Mapbox par un fond Natural Earth
-50 m en SVG (projection Mercator). Utile pour vérifier la timeline, les
+50 m en SVG (projection Mercator, couleurs du thème). Utile pour vérifier la timeline, les
 tracés et les overlays hors ligne — ce n'est **pas** le rendu final.
 
 ```sh
@@ -87,7 +87,7 @@ REMOTION_MAP_OFFLINE=1 npm run render:origine
     { "kind": "transit", "title": "Port de Djibouti", "lat": 11.6, "lng": 43.15,
       "mode": "sea", "waypoints": [[11.75, 43.45], "…"] },
     { "kind": "actor", "title": "Atelier de Lucie", "personName": "Lucie",
-      "caption": "Torréfié en petit lot chaque semaine", "city": "Rennes",
+      "caption": "Torréfié en petit lot chaque semaine", "place": "Rennes", "country": "FR",
       "lat": 48.11, "lng": -1.68, "photo": "roaster.jpg", "final": true }
   ]
 }
@@ -111,12 +111,12 @@ Niveau étape :
 | `title` | Nom du lieu. Jamais affiché pour un transit. |
 | `personName` | Actor uniquement. Affiché en grand sur le cartouche. |
 | `caption` | Texte sous le titre. Ignoré pour un transit. |
-| `city` | Optionnel. Ville mise en évidence sur le cartouche (recommandé pour l'atelier). |
+| `place` | Optionnel. Lieu lisible (« Guji », « Liffré, Bretagne ») : ligne « Place, Pays » du cartouche. |
 | `lat`, `lng` | Coordonnées réelles (degrés décimaux). |
 | `photo` | Fichier image dans `public/`. Ignoré pour un transit. Grand format pour le premier et le dernier actor, vignette pour les autres. |
 | `mode` | `"land"` (défaut) ou `"sea"` : mode du **trajet qui part de cette étape**. Un tronçon `sea` est tracé en pointillés. |
 | `waypoints` | Points de passage `[lat, lng]` du trajet qui part de cette étape. **Obligatoire pour `sea`** : c'est le JSON qui porte la route (détroits, canaux, caps), le code relie les points par des arcs great-circle et ne traverse jamais une terre de lui-même. |
-| `country` | Optionnel, ISO alpha-2 : le pays se teinte dans la couleur de marque quand l'actor est atteint. |
+| `country` | Optionnel, ISO alpha-2. Traduit en clair sur le cartouche (« Éthiopie », via `Intl.DisplayNames`, langue `brand.locale`) et le pays se teinte dans la couleur de marque quand l'actor est atteint. |
 | `final` | Marque l'étape d'arrivée (zoom ville). |
 
 ## Les deux timelines
@@ -130,14 +130,15 @@ plafonnée en conséquence, et `npm test` le vérifie sur les deux JSON.
 1. Intro 3 s — logo en fondu, « Qui fait {product} ».
 2. Premier actor 8 s — caméra déjà posée, pas de vol d'entrée. Photo grand
    format (bas plein cadre en 9:16, tiers droit en 16:9). Cartouche :
-   `personName` en grand, `title`, `caption`.
+   chapeau « D'où ça vient », `personName` en grand, `title`, lieu
+   « Place, Pays », `caption`.
 3. Actors intermédiaires 6 s chacun (vol court d'entrée compris), vignette photo.
 4. Transits consécutifs fusionnés en **un seul vol de 3 s max** : dézoom
    vers la région / le globe, un arc continu se dessine en accéléré à travers
    tous les points de transit. Aucun cartouche, aucun nom. Au milieu de l'arc,
-   une seule ligne : « N intermédiaires » ou `sourcingLine`.
-5. Dernier actor 8 s — zoom ville, photo grand format, cartouche avec la
-   ville (`city`) en évidence.
+   une seule ligne : « Et entre les deux : N intermédiaires » (ou `sourcingLine`).
+5. Dernier actor 8 s — zoom ville, photo grand format, cartouche « Qui le
+   fabrique » avec le lieu.
 6. Fin 4 s — carte fixe assombrie, logo + `endLine`.
 
 **Terroir** (≈ 38 s avec l'exemple) :
@@ -146,10 +147,16 @@ plafonnée en conséquence, et `npm test` le vérifie sur les deux JSON.
 2. Vue rayon 5 s — caméra sur l'atelier, cadrage de toutes les fermes, cercle
    fin de rayon = distance max atelier → fermes arrondie à la dizaine de km,
    mention « Tout vient de moins de N km ». Les fermes s'allument une à une.
-3. Par ferme 6 s — vol court, point pulsant, photo, cartouche. Pas de tracé
-   entre fermes ; un trait fin ferme → atelier apparaît quand on quitte la ferme.
-4. Atelier 8 s — retour au centre, tous les traits convergent, photo grand format.
+3. Par ferme 6 s — vol court, point pulsant, photo, cartouche « Ferme i / n ».
+   Pas de tracé entre fermes ; un trait fin ferme → atelier apparaît quand on
+   quitte la ferme.
+4. Atelier 8 s — retour au centre, tous les traits convergent, photo grand
+   format, cartouche « L'atelier ».
 5. Fin 4 s.
+
+Les chapeaux (« D'où ça vient », « Qui le transforme », « Qui le fabrique »,
+« Ferme i / n », « L'atelier ») et la ligne de transit se règlent dans
+`src/defaults.ts` (`CHAPTER_LINES`, `TRANSIT_LINE`).
 
 Cartouches et photos apparaissent en 300 ms et ont disparu 300 ms avant le
 vol suivant. Aucun texte de logistique n'est affiché, même s'il est dans le
@@ -193,18 +200,26 @@ indique où ajouter des waypoints. Il écrit aussi `out/route-check*.svg`.
   "endLine": "Récolté en janvier. Torréfié mardi dernier.",
   "music": "music.mp3",
   "musicGainDb": -18,
-  "map": { "globe": true, "atmosphere": true, "hillshade": true, "coastline": true,
-           "countries": true, "highlightCountries": true, "vehicle": true,
-           "seaColor": "#0a1220", "landColor": "#1f2329" }
+  "locale": "fr",
+  "map": { "theme": "day", "style": "", "globe": true, "atmosphere": true,
+           "hillshade": true, "highlightCountries": true, "vehicle": true,
+           "seaColor": "", "landColor": "", "coastline": false, "countries": false }
 }
 ```
 
 - `color` : tracés, points, cercle, accents. `logo` : intro et fin. `endLine` : ligne de fin.
 - `music` / `musicGainDb` : musique de fond (défaut `music.mp3` à −18 dB).
-- `map` (optionnel, chaque clé a un défaut) : globe + atmosphère aux petits
-  zooms, relief (MNT Mapbox Terrain), contraste terre / mer, liseré de côte,
-  frontières et noms de pays renforcés, pays des actors teintés, bateau /
-  camion à la tête du tracé.
+- `locale` : langue des noms de pays sur les cartouches (défaut `fr`).
+- `map` (optionnel, chaque clé a un défaut) :
+  - `theme` : `day` (défaut) = `outdoors-v12` tel quel — relief, végétation,
+    noms de lieux, atmosphère claire ; `night` = `dark-v11` recoloré (mer
+    bleu nuit, terre anthracite, liseré de côte, frontières et noms de pays
+    renforcés, étoiles).
+  - `style` : URL d'un style Mapbox pour remplacer celui du thème (ex. un
+    style de marque fait dans Mapbox Studio).
+  - `globe` + `atmosphère`, `hillshade` (ignoré si le style a déjà son
+    relief), `seaColor` / `landColor` (vides = couleurs du style),
+    `coastline`, `countries`, `highlightCountries`, `vehicle`.
 
 ## Fichiers médias
 

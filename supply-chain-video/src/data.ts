@@ -1,5 +1,5 @@
 import { staticFile } from "remotion";
-import { DEFAULT_CAMERA, DEFAULT_LOOK, DEFAULT_TIMING } from "./defaults";
+import { DEFAULT_CAMERA, DEFAULT_LOOK, DEFAULT_TIMING, NIGHT_LOOK } from "./defaults";
 import type { Brand, CameraSettings, MapLook, Step, StepsFile, Timing } from "./types";
 
 const fetchJson = async (file: string): Promise<unknown> => {
@@ -122,7 +122,11 @@ export const validateBrand = (raw: unknown): Brand => {
       if (typeof v !== typeof DEFAULT_LOOK[k as keyof MapLook])
         throw new Error(`brand : map.${k} invalide`);
     }
+    if (brand.map.theme !== undefined && brand.map.theme !== "day" && brand.map.theme !== "night")
+      throw new Error('brand : map.theme doit valoir "day" ou "night"');
   }
+  if (brand.locale !== undefined && typeof brand.locale !== "string")
+    throw new Error("brand : locale doit être une chaîne (ex. \"fr\")");
   return brand;
 };
 
@@ -136,10 +140,15 @@ export const resolveCamera = (file: StepsFile): CameraSettings => ({
   ...(file.camera ?? {}),
 });
 
-export const resolveLook = (brand: Brand): MapLook => ({
-  ...DEFAULT_LOOK,
-  ...(brand.map ?? {}),
-});
+export const resolveLook = (brand: Brand): MapLook => {
+  const theme = brand.map?.theme ?? DEFAULT_LOOK.theme;
+  return {
+    ...DEFAULT_LOOK,
+    ...(theme === "night" ? NIGHT_LOOK : {}),
+    ...(brand.map ?? {}),
+    theme,
+  };
+};
 
 /** Convertit un gain en dB en facteur de volume linéaire (0 dB → 1). */
 export const dbToGain = (db: number): number => Math.pow(10, db / 20);

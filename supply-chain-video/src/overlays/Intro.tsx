@@ -1,4 +1,5 @@
 import { Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { VEIL_OPACITY } from "../defaults";
 import type { Brand } from "../types";
 import { FONT_FAMILY, useLayout } from "./layout";
 
@@ -32,7 +33,7 @@ export const Intro = ({ brand, subtitle, start, end }: Props) => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        background: `rgba(8, 8, 12, ${0.6 * whole})`,
+        background: `rgba(8, 8, 12, ${VEIL_OPACITY.intro * whole})`,
         opacity: whole,
         fontFamily: FONT_FAMILY,
         color: "white",

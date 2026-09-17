@@ -9,6 +9,7 @@
       "caption": "Pommes bitter-sweet, cueillies à la main",
       "lat": 48.21,
       "lng": -1.51,
+      "place": "Liffré, Bretagne",
       "photo": "farm.jpg"
     },
     {
@@ -16,23 +17,25 @@
       "title": "Verger du Bois-Guy",
       "caption": "Vieilles variétés greffées en 1992",
       "lat": 48.25,
-      "lng": -1.47
+      "lng": -1.47,
+      "place": "Liffré, Bretagne"
     },
     {
       "kind": "actor",
       "title": "Ferme des Landes",
       "caption": "Douce-Moën et Kermerrien",
       "lat": 48.26,
-      "lng": -1.4
+      "lng": -1.4,
+      "place": "Liffré, Bretagne"
     },
     {
       "kind": "actor",
       "title": "Le Pressoir",
       "personName": "Anne",
       "caption": "Pressé et embouteillé sur place",
-      "city": "Liffré",
       "lat": 48.22,
       "lng": -1.5,
+      "place": "Liffré, Bretagne",
       "photo": "roaster.jpg",
       "final": true
     }

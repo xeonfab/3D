@@ -94,6 +94,18 @@ for (const file of files) {
 
 const segs = (t: ReturnType<typeof buildTimeline>) => t.segments;
 
+describe("lieu et chapeaux", () => {
+  it("traduit le pays et compose « Place, Pays »", () => {
+    const steps = load("steps-origine.json");
+    const timing = resolveTiming(steps);
+    const ctx = buildSceneContext(steps, timing, resolveCamera(steps), { width: 1080, height: 1920 }, "fr");
+    const first = buildTimeline(steps, timing).segments.find((s) => s.kind === "actor")!;
+    const state = sceneAt(ctx, first.start + 20);
+    assert.equal(state.card?.location, "Guji, Éthiopie");
+    assert.equal(state.card?.chapter, "D'où ça vient");
+  });
+});
+
 describe("validation", () => {
   it("refuse un step sans kind", () => {
     const raw = load("steps-origine.json");

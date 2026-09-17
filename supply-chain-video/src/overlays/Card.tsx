@@ -7,8 +7,8 @@ import { FONT_FAMILY, useLayout } from "./layout";
 type Props = { card: CardModel; color: string; fadeSeconds?: number };
 
 /**
- * Cartouche d'un actor : ville en évidence si renseignée, personName en
- * grand si présent, puis title, puis caption. Aucun texte de logistique.
+ * Cartouche d'un actor : chapeau (rôle du plan), personName en grand si
+ * présent, title, lieu « Place, Pays », caption. Aucun texte de logistique.
  */
 export const Card = ({ card, color, fadeSeconds = DEFAULT_TIMING.cardFadeSeconds }: Props) => {
   const frame = useCurrentFrame();
@@ -46,20 +46,18 @@ export const Card = ({ card, color, fadeSeconds = DEFAULT_TIMING.cardFadeSeconds
         boxShadow: "0 12px 40px rgba(0,0,0,0.45)",
       }}
     >
-      {card.city ? (
-        <div
-          style={{
-            fontSize: L.smallFont * 1.3,
-            letterSpacing: 3,
-            textTransform: "uppercase",
-            color,
-            fontWeight: 800,
-            marginBottom: L.pad * 0.35,
-          }}
-        >
-          {card.city}
-        </div>
-      ) : null}
+      <div
+        style={{
+          fontSize: L.smallFont * 1.15,
+          letterSpacing: 3,
+          textTransform: "uppercase",
+          color,
+          fontWeight: 800,
+          marginBottom: L.pad * 0.35,
+        }}
+      >
+        {card.chapter}
+      </div>
       {card.personName ? (
         <div style={{ fontSize: L.personFont, fontWeight: 800, lineHeight: 1.05 }}>
           {card.personName}
@@ -75,13 +73,33 @@ export const Card = ({ card, color, fadeSeconds = DEFAULT_TIMING.cardFadeSeconds
       >
         {card.title}
       </div>
+      {card.location ? (
+        <div
+          style={{
+            fontSize: L.captionFont * 0.95,
+            marginTop: L.pad * 0.3,
+            color: "rgba(255,255,255,0.7)",
+            display: "flex",
+            alignItems: "center",
+            gap: L.pad * 0.3,
+          }}
+        >
+          <svg width={L.captionFont * 0.8} height={L.captionFont * 0.8} viewBox="0 0 24 24" aria-hidden>
+            <path
+              d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"
+              fill={color}
+            />
+          </svg>
+          {card.location}
+        </div>
+      ) : null}
       {card.caption ? (
         <div
           style={{
             fontSize: L.captionFont,
             lineHeight: 1.3,
             marginTop: L.pad * 0.4,
-            color: "rgba(255,255,255,0.82)",
+            color: "rgba(255,255,255,0.88)",
           }}
         >
           {card.caption}

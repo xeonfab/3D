@@ -3,8 +3,9 @@ import land50m from "world-atlas/land-50m.json";
 import { useMemo } from "react";
 import { useVideoConfig } from "remotion";
 import { toScreen, unproject, project } from "./camera";
+import { OFFLINE_COLORS } from "./defaults";
 import type { SceneLine } from "./scene";
-import type { Camera, LngLat } from "./types";
+import type { Camera, LngLat, MapLook } from "./types";
 
 /*
  * Fond de carte hors ligne (REMOTION_MAP_OFFLINE=1) : terres Natural Earth
@@ -37,10 +38,11 @@ const ringBoxes = rings.map((r) => {
   return [w, s, e, n] as const;
 });
 
-type Props = { camera: Camera; lines: SceneLine[]; color: string };
+type Props = { camera: Camera; lines: SceneLine[]; color: string; theme: MapLook["theme"] };
 
-export const OfflineMap = ({ camera, lines, color }: Props) => {
+export const OfflineMap = ({ camera, lines, color, theme }: Props) => {
   const { width, height } = useVideoConfig();
+  const C = OFFLINE_COLORS[theme];
 
   const landPath = useMemo(() => {
     // Emprise visible (avec marge) pour ne projeter que les polygones utiles.
@@ -86,9 +88,9 @@ export const OfflineMap = ({ camera, lines, color }: Props) => {
     <svg
       width={width}
       height={height}
-      style={{ position: "absolute", inset: 0, background: "#0a1220" }}
+      style={{ position: "absolute", inset: 0, background: C.sea }}
     >
-      <path d={landPath} fill="#1f2329" stroke="#6f8296" strokeWidth={1} strokeOpacity={0.55} />
+      <path d={landPath} fill={C.land} stroke={C.coast} strokeWidth={1} strokeOpacity={0.7} />
       {lines.map((l, i) => {
         const d = toPath(l.feature.geometry.coordinates);
         if (l.style === "circle")
@@ -109,7 +111,7 @@ export const OfflineMap = ({ camera, lines, color }: Props) => {
           </g>
         );
       })}
-      <text x={16} y={height - 16} fill="#6f8296" fontSize={18} fontFamily="monospace">
+      <text x={16} y={height - 16} fill={C.text} fontSize={18} fontFamily="monospace">
         aperçu hors ligne — Natural Earth, pas Mapbox
       </text>
     </svg>
