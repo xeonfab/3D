@@ -1,12 +1,13 @@
 name: Provenance Studio
 
+# Le dépôt n'a pas de branche `main` : on lance la CI sur toute PR et tout
+# push qui touchent l'application.
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: ['**']
     paths: ['provenance-studio/**', '.github/workflows/provenance-studio.yml']
   pull_request:
-    branches: [ main ]
     paths: ['provenance-studio/**', '.github/workflows/provenance-studio.yml']
 
 concurrency:
