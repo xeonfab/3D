@@ -38,6 +38,8 @@ app/                 routes Next.js (App Router)
 components/ui/       composants shadcn/ui
 lib/                 supabase clients, auth, plans, utilitaires
 lib/routes.ts        tracés (great-circle, mer via waypoints) — partagé avec la vidéo
+lib/render/          RenderProvider (Lambda, local) et service de rendu
+remotion/            template vidéo Remotion (compositions vertical / horizontal)
 lib/searoute.server.ts, lib/geo/  route maritime : réseau searoute + contrôle des terres
 supabase/migrations/ schéma SQL, RLS, buckets Storage
 scripts/seed.ts      jeu de données de développement
@@ -101,13 +103,55 @@ cp .env.example .env.local
    restreignez-le aux URL de votre site.
 2. Renseignez `NEXT_PUBLIC_MAPBOX_TOKEN` dans `.env.local`.
 
-### 4. Remotion Lambda (AWS) — phase 3
+### 4. Remotion Lambda (AWS)
 
-Les étapes détaillées arrivent avec la phase 3. En résumé : créer un
-utilisateur IAM avec la politique fournie par `npx remotion lambda policies`,
-déployer la fonction (`npx remotion lambda functions deploy`) et le site
-(`npx remotion lambda sites create`), puis renseigner les variables
-`REMOTION_*` de `.env.example`.
+Le rendu vidéo tourne sur [Remotion Lambda](https://www.remotion.dev/docs/lambda).
+Une seule fois, depuis `provenance-studio/` :
+
+1. Créez un utilisateur IAM `remotion-user` avec la politique affichée par
+   `npx remotion lambda policies user`, puis un rôle `remotion-lambda-role`
+   avec la politique de `npx remotion lambda policies role`
+   (détails : https://www.remotion.dev/docs/lambda/setup).
+2. Renseignez `REMOTION_AWS_ACCESS_KEY_ID`, `REMOTION_AWS_SECRET_ACCESS_KEY`
+   et `REMOTION_AWS_REGION` (par exemple `eu-west-3`) dans `.env.local`, puis
+   vérifiez : `npx remotion lambda policies validate`.
+3. Déployez la fonction (WebGL activé pour Mapbox) et notez son nom :
+
+   ```sh
+   npx remotion lambda functions deploy --memory=3009 --timeout=240 --disk=2048
+   ```
+
+4. Déployez le site (le bundle Remotion, avec `lib/routes.ts` partagé et les
+   assets de `remotion/assets/`) et notez l'URL :
+
+   ```sh
+   npx remotion lambda sites create remotion/index.ts --site-name=provenance-studio
+   ```
+
+   À refaire après toute modification du template (`remotion/`) ou de
+   `lib/routes.ts`.
+
+5. Reportez le nom de la fonction dans `REMOTION_LAMBDA_FUNCTION_NAME` et l'URL
+   du site dans `REMOTION_SERVE_URL`. `RENDER_PROVIDER=lambda`.
+
+Les vidéos sont rendues dans le bucket S3 de Remotion puis copiées dans le
+bucket Supabase `renders` (avec leur miniature) : le bucket S3 peut être vidé
+à tout moment (cycle de vie de quelques jours conseillé).
+
+#### Rendu local (développement)
+
+Sans AWS, `RENDER_PROVIDER=local` lance `scripts/render-worker.ts` sur la
+machine (Chrome requis, voir `REMOTION_*` dans `.env.example`). Pour tester le
+template sans base de données :
+
+```sh
+npx tsx scripts/make-test-props.ts            # jeu de test → remotion/sample-props.json
+npm run remotion:studio                        # Remotion Studio
+npx remotion render vertical out/test.mp4 --props=remotion/sample-props.json
+```
+
+Sans token Mapbox dans les props, une carte de secours (continents en SVG,
+même caméra) remplace les tuiles Mapbox.
 
 ### 5. Stripe — phase 5
 
@@ -118,10 +162,11 @@ prix dans `STRIPE_PRICE_PRO_MONTHLY`, puis écouter le webhook en local :
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
-### 6. Resend — phase 3
+### 6. Resend
 
-Créer une clé API, vérifier un domaine d'envoi et renseigner `RESEND_API_KEY`
-et `RESEND_FROM_EMAIL`.
+Créez une clé API, vérifiez un domaine d'envoi et renseignez `RESEND_API_KEY`
+et `RESEND_FROM_EMAIL`. L'email « Votre vidéo est prête » est envoyé à la fin
+de chaque rendu ; sans clé, il est simplement ignoré (journalisé).
 
 ### 7. Lancer
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MonitorSmartphone } from "lucide-react";
 
 import type { MapStep } from "@/components/map/product-map";
+import type { RenderView } from "@/lib/render/service";
 import type { GeocodeResult } from "@/lib/geocode";
 import type { LngLat } from "@/lib/routes";
 import { publicUrl } from "@/lib/storage";
@@ -21,7 +22,9 @@ import {
   type ProductPatch,
   type StepPatch,
 } from "../actions";
+import type { RenderOverview } from "../render-actions";
 import { EditorHeader } from "./editor-header";
+import { GenerateDialog } from "./generate-dialog";
 import { MapPreview } from "./map-preview";
 import { StepCard, type SeaRouteState } from "./step-card";
 import { StepsPanel } from "./steps-panel";
@@ -32,7 +35,8 @@ type ProductEditorProps = {
   initialProduct: EditorProduct;
   initialSteps: EditorStep[];
   brand: Brand;
-  plan: { maxSteps: number; isFree: boolean };
+  plan: { maxSteps: number; isFree: boolean; resolution: string; watermark: boolean };
+  initialRenders: RenderOverview;
 };
 
 type Patch = ({ kind: "product" } & ProductPatch) | ({ kind: "step" } & StepPatch);
@@ -42,8 +46,25 @@ const seaKey = (s: EditorStep, next: EditorStep | undefined) =>
     ? `${s.lat},${s.lng}|${next.lat},${next.lng}`
     : null;
 
-export function ProductEditor({ initialProduct, initialSteps, brand, plan }: ProductEditorProps) {
+export function ProductEditor({
+  initialProduct,
+  initialSteps,
+  brand,
+  plan,
+  initialRenders,
+}: ProductEditorProps) {
   const [product, setProduct] = useState(initialProduct);
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [rendering, setRendering] = useState(
+    initialRenders.renders.some((r) => r.status === "queued" || r.status === "rendering"),
+  );
+  const [shareable, setShareable] = useState(
+    Boolean(initialRenders.publicUrl) && initialRenders.renders.some((r) => r.status === "done"),
+  );
+  const onRendersChange = useCallback((renders: RenderView[]) => {
+    setRendering(renders.some((r) => r.status === "queued" || r.status === "rendering"));
+    if (renders.some((r) => r.status === "done")) setShareable(true);
+  }, []);
   const [steps, setSteps] = useState(initialSteps);
   const [selectedId, setSelectedId] = useState<string | null>(initialSteps[0]?.id ?? null);
   const [adding, setAdding] = useState(false);
@@ -232,11 +253,21 @@ export function ProductEditor({ initialProduct, initialSteps, brand, plan }: Pro
         saveStatus={autosave.status}
         saveError={autosave.error}
         onChange={onProductChange}
+        onGenerate={() => setGenerateOpen(true)}
+        generating={rendering}
+        onShare={shareable ? () => setGenerateOpen(true) : undefined}
         generateDisabledReason={
-          readyForVideo
-            ? "La génération vidéo arrive à la prochaine étape du chantier."
-            : "Localisez au moins deux étapes pour générer la vidéo."
+          readyForVideo ? undefined : "Localisez au moins deux étapes pour générer la vidéo."
         }
+      />
+
+      <GenerateDialog
+        open={generateOpen}
+        onOpenChange={setGenerateOpen}
+        productId={product.id}
+        initial={initialRenders}
+        plan={{ isFree: plan.isFree, resolution: plan.resolution, watermark: plan.watermark }}
+        onRendersChange={onRendersChange}
       />
 
       {actionError ? (

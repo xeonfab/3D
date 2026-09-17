@@ -73,6 +73,12 @@ export type RenderRow = Timestamps & {
   duration_seconds: number | null;
 };
 
+export type StripeEventRow = {
+  id: string;
+  type: string;
+  created_at: string;
+};
+
 export type PublicPageRow = Timestamps & {
   product_id: string;
   slug: string;
@@ -189,6 +195,12 @@ export type Database = {
           },
         ];
       };
+      stripe_events: {
+        Row: StripeEventRow;
+        Insert: Optional<StripeEventRow, "created_at">;
+        Update: Partial<StripeEventRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -198,6 +210,10 @@ export type Database = {
       is_org_member_path: { Args: { object_name: string }; Returns: boolean };
       plan_max_products: { Args: { p: PlanType }; Returns: number | null };
       plan_max_steps: { Args: { p: PlanType }; Returns: number };
+      increment_public_page_counters: {
+        Args: { page_slug: string; from_qr: boolean };
+        Returns: undefined;
+      };
     };
     Enums: {
       plan_type: PlanType;

@@ -1,0 +1,106 @@
+{
+  "product": {
+    "name": "Éthiopie Guji nature",
+    "endLine": "Récolté en janvier. Torréfié mardi dernier."
+  },
+  "steps": [
+    {
+      "title": "Ferme Kayon Mountain",
+      "caption": "Récolte à la main, nov.–janv.",
+      "lat": 5.75,
+      "lng": 38.9,
+      "mode": "land",
+      "photoUrl": "samples/farm.jpg",
+      "waypoints": [],
+      "durationSeconds": 6
+    },
+    {
+      "title": "Station de lavage",
+      "caption": "Séchage 18 jours sur lits africains",
+      "lat": 5.9,
+      "lng": 38.8,
+      "mode": "land",
+      "photoUrl": null,
+      "waypoints": [],
+      "durationSeconds": 6
+    },
+    {
+      "title": "Port de Djibouti",
+      "caption": "Départ en conteneur, café vert en sacs GrainPro",
+      "lat": 11.6,
+      "lng": 43.15,
+      "mode": "sea",
+      "photoUrl": null,
+      "waypoints": [
+        [43.42295, 12.18295],
+        [43.465, 12.6341],
+        [43.3, 12.7],
+        [42, 14.750833333333333],
+        [42, 15],
+        [41.2, 16.3],
+        [38.9, 20.75],
+        [37, 23.6],
+        [34.5, 27],
+        [33.75, 27.9],
+        [32.93000000000001, 28.98],
+        [32.6, 29.7],
+        [32.1, 31.7],
+        [27.6298, 33.328],
+        [23, 34.8],
+        [15.2, 36.4],
+        [11, 37.5],
+        [7.5, 37.4],
+        [3.1, 37.2],
+        [-4.7, 36],
+        [-5.75, 35.95],
+        [-9.25, 36.8],
+        [-9.6, 38.5],
+        [-9.9844, 40.7798],
+        [-9.5, 43],
+        [-8.5, 43.9],
+        [-5.5, 48.6667],
+        [-1.3, 49.95],
+        [-0.109, 49.4978]
+      ],
+      "durationSeconds": 6
+    },
+    {
+      "title": "Port du Havre",
+      "caption": "6 semaines de traversée",
+      "lat": 49.49,
+      "lng": 0.11,
+      "mode": "land",
+      "photoUrl": null,
+      "waypoints": [],
+      "durationSeconds": 6
+    },
+    {
+      "title": "Entrepôt Belco",
+      "caption": "Stocké à température contrôlée",
+      "lat": 44.84,
+      "lng": -0.58,
+      "mode": "land",
+      "photoUrl": null,
+      "waypoints": [],
+      "durationSeconds": 6
+    },
+    {
+      "title": "Atelier",
+      "caption": "Torréfié en petit lot chaque semaine",
+      "lat": 48.11,
+      "lng": -1.68,
+      "mode": "land",
+      "photoUrl": "samples/roaster.jpg",
+      "waypoints": [],
+      "durationSeconds": 6
+    }
+  ],
+  "brand": {
+    "name": "Torréfaction Lucie",
+    "color": "#D9822B",
+    "logoUrl": "samples/logo.png"
+  },
+  "watermark": false,
+  "format": "vertical",
+  "mapboxToken": null
+}

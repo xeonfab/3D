@@ -3,7 +3,11 @@ import path from "node:path";
 
 export default defineConfig({
   resolve: {
-    alias: { "@": path.resolve(import.meta.dirname, ".") },
+    alias: {
+      "@": path.resolve(import.meta.dirname, "."),
+      // Les modules serveur importent `server-only` : sans effet sous Vitest.
+      "server-only": path.resolve(import.meta.dirname, "test/server-only-stub.ts"),
+    },
   },
   test: {
     environment: "node",

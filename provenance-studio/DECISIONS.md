@@ -108,3 +108,46 @@ simple qui respecte les règles non négociables.
 29. **Bouton « Générer la vidéo » présent mais inactif** jusqu'à la phase 3,
     avec une infobulle qui l'explique (ou qui rappelle qu'il faut deux étapes
     localisées).
+
+## Phase 3 — Rendu vidéo
+
+30. **Template dans `remotion/` de l'application** (et non un paquet
+    séparé) pour partager `lib/routes.ts` avec l'aperçu navigateur. Le bundle
+    Remotion résout l'alias `@/` via `remotion.config.ts` ; les assets
+    (musique, polices, logo d'exemple) sont dans `remotion/assets`.
+31. **Répartition vol / arrêt.** Le brief fixe la durée à 3 s + Σ
+    `duration_seconds` + 4 s : le vol depuis l'étape précédente est donc pris
+    sur la durée de l'étape (45 %, au moins 1,6 s, en laissant au moins 1,2 s
+    d'arrêt). La première étape n'a pas de vol.
+32. **Caméra en pur TypeScript.** Position, zoom et projection écran sont des
+    fonctions pures du numéro de frame (trajectoire `flyTo` de van Wijk & Nuij
+    réimplémentée) ; Mapbox ne fait que `jumpTo` puis émet `idle`. Les
+    altitudes reprennent celles de l'aperçu (`stopZoom`, `zoomForDistance`).
+33. **Carte de secours sans token.** Quand `mapboxToken` est nul, une scène SVG
+    (continents Natural Earth simplifiés, même projection, même caméra)
+    remplace Mapbox. Elle sert aux tests automatisés et au rendu de
+    vérification de cette phase, l'environnement de développement n'ayant ni
+    token Mapbox ni GPU ; en production le token est toujours transmis.
+34. **Polices embarquées.** Inter (variable) et Fraunces sont livrées dans
+    `remotion/assets/fonts` et chargées avec `@remotion/fonts` : aucun appel
+    réseau au rendu, comportement identique sur Lambda et en local.
+35. **`RenderProvider`.** Interface `start / poll / still` ; implémentations
+    Lambda (`@remotion/lambda`) et locale (worker `scripts/render-worker.ts`
+    détaché, suivi par fichier `status.json`). Choix par `RENDER_PROVIDER`.
+36. **Finalisation par le polling.** Pas de webhook : l'action de polling
+    (toutes les 3 s) interroge le fournisseur ; à la fin, un seul appel «
+    réclame » la ligne (`progress` 100 sert de jeton), copie la vidéo et la
+    miniature dans le Storage Supabase, passe le produit en public, envoie
+    l'email. Un échec de rendu ou de démarrage met simplement `failed` :
+    aucun quota n'existe ni n'est décrémenté.
+37. **Miniature.** Une image fixe rendue au cœur de l'arrêt sur la dernière
+    étape (sur Lambda : `renderStillOnLambda` ; en local : `renderStill`),
+    stockée à côté du MP4, utilisée par le tableau de bord et le lecteur.
+38. **Produit public à la première vidéo.** Générer une vidéo signifie
+    vouloir la partager : le produit passe `public = true` à la fin du premier
+    rendu réussi et sa page publique (slug `<marque>-<produit>`) est créée dès
+    le lancement.
+39. **Chrome pour les rendus locaux.** Remotion attend son `chrome-headless-
+shell` (téléchargement bloqué ici) : le worker accepte
+    `REMOTION_BROWSER_EXECUTABLE` et `REMOTION_CHROME_MODE=chrome-for-testing`
+    pour un Chromium récent.
