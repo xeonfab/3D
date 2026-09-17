@@ -75,8 +75,8 @@ cp .env.example .env.local
    npx supabase db push
    ```
 
-   Sans la CLI : ouvrez **SQL Editor** dans le dashboard et exécutez le contenu
-   de `supabase/migrations/20260916000000_init.sql`.
+   Sans la CLI : ouvrez **SQL Editor** dans le dashboard et exécutez, dans
+   l'ordre, chaque fichier de `supabase/migrations/`.
 
 4. **Authentication → URL Configuration** : définissez _Site URL_ sur
    `http://localhost:3000` (puis votre URL Vercel) et ajoutez
