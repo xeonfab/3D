@@ -73,6 +73,12 @@ export type RenderRow = Timestamps & {
   duration_seconds: number | null;
 };
 
+export type StripeEventRow = {
+  id: string;
+  type: string;
+  created_at: string;
+};
+
 export type PublicPageRow = Timestamps & {
   product_id: string;
   slug: string;
@@ -188,6 +194,12 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      stripe_events: {
+        Row: StripeEventRow;
+        Insert: Optional<StripeEventRow, "created_at">;
+        Update: Partial<StripeEventRow>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

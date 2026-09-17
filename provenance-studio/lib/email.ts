@@ -51,3 +51,27 @@ export async function sendVideoReadyEmail(input: {
   const { error } = await c.resend.emails.send({ from: c.from, to: input.to, subject, html, text });
   if (error) console.error("[email] sendVideoReadyEmail", error);
 }
+
+export async function sendPaymentFailedEmail(input: { to: string }): Promise<void> {
+  const c = client();
+  if (!c) return;
+  const portal = `${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}/app/settings`;
+  const html = `
+<div style="font-family:Inter,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#1c1a17">
+  <p style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#7a746c;margin:0 0 16px">Provenance Studio</p>
+  <h1 style="font-family:Georgia,serif;font-weight:400;font-size:26px;margin:0 0 16px">Le paiement de votre abonnement a échoué.</h1>
+  <p style="font-size:16px;line-height:1.5;margin:0 0 24px">
+    Votre plan Pro reste actif pendant que Stripe retente le prélèvement. Pour éviter une interruption,
+    vérifiez votre moyen de paiement depuis vos paramètres.
+  </p>
+  <p style="margin:0"><a href="${escape(portal)}" style="display:inline-block;background:#1c1a17;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:15px">Mettre à jour le moyen de paiement</a></p>
+</div>`;
+  const { error } = await c.resend.emails.send({
+    from: c.from,
+    to: input.to,
+    subject: "Paiement échoué : votre abonnement Pro",
+    html,
+    text: `Le paiement de votre abonnement Pro a échoué. Mettez à jour votre moyen de paiement : ${portal}`,
+  });
+  if (error) console.error("[email] sendPaymentFailedEmail", error);
+}

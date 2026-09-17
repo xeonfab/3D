@@ -12,9 +12,9 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; deleted?: string }>;
 }) {
-  const { next, error } = await searchParams;
+  const { next, error, deleted } = await searchParams;
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? ERROR_MESSAGES.invalid) : null;
 
   return (
@@ -50,6 +50,14 @@ export default async function LoginPage({
           <p className="mt-2 mb-8 text-muted-foreground">
             Entrez votre adresse email pour vous connecter ou créer votre compte.
           </p>
+          {deleted === "1" ? (
+            <p
+              role="status"
+              className="mb-6 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground"
+            >
+              Votre compte a été supprimé. Merci d&apos;avoir utilisé Provenance Studio.
+            </p>
+          ) : null}
           {errorMessage ? (
             <p
               role="alert"
